@@ -11,6 +11,7 @@ import {
 import { resolveEffectiveProxy, spawnProxyCommand } from '../system-transport/ssh-proxy-command'
 import type { SshClaudeConnectionObserver } from '../../../shared/intranet/ssh-claude-diagnostic'
 import { SshClaudeDiagnosticFailure, sshClaudeFailure } from './ssh-claude-failure'
+import type { SshClaudeOpenedChannel } from './ssh-claude-channel'
 
 export class SshClaudePasswordSession {
   private password: string | undefined
@@ -19,6 +20,7 @@ export class SshClaudePasswordSession {
   private connecting: Promise<void> | null = null
   private proxy: ReturnType<typeof spawnProxyCommand> | null = null
   private closed = false
+  private useShell = false
 
   constructor(
     private readonly target: SshTarget,
@@ -28,29 +30,67 @@ export class SshClaudePasswordSession {
     this.password = password
   }
 
-  async open(command: string): Promise<ClientChannel> {
+  async open(command: string): Promise<SshClaudeOpenedChannel> {
     this.connecting ??= this.connect()
     await this.connecting
     if (this.closed || !this.client) {
       throw new Error('SSH session closed')
     }
+    if (this.useShell) {
+      return this.openShell()
+    }
     this.observe('command_opening')
-    return new Promise((resolve, reject) => {
-      this.client!.exec(command, (error, channel) => {
-        if (error) {
-          const problem = sshClaudeFailure(error)
-          reject(
-            new SshClaudeDiagnosticFailure(problem === 'ssh_failed' ? 'command_refused' : problem)
-          )
-        } else if (this.closed) {
-          channel.close()
-          reject(new Error('SSH session closed'))
-        } else {
-          this.observe('command_opened')
-          channel.end()
-          resolve(channel)
-        }
+    try {
+      const channel = await new Promise<ClientChannel>((resolve, reject) => {
+        this.client!.exec(command, (error, channel) => {
+          if (error) {
+            const problem = sshClaudeFailure(error)
+            reject(
+              new SshClaudeDiagnosticFailure(problem === 'ssh_failed' ? 'command_refused' : problem)
+            )
+          } else if (this.closed) {
+            channel.close()
+            reject(new Error('SSH session closed'))
+          } else {
+            this.observe('command_opened')
+            channel.end()
+            resolve(channel)
+          }
+        })
       })
+      return { channel }
+    } catch (error) {
+      if (sshClaudeFailure(error) !== 'command_refused' || this.closed) {
+        throw error
+      }
+      this.observe('exec_refused')
+      this.useShell = true
+      return this.openShell()
+    }
+  }
+
+  private openShell(): Promise<SshClaudeOpenedChannel> {
+    this.observe('shell_opening')
+    return new Promise((resolve, reject) => {
+      if (!this.client || this.closed) {
+        reject(new SshClaudeDiagnosticFailure('connection_reset'))
+        return
+      }
+      this.client.shell(
+        { term: 'dumb', cols: 4096, rows: 24, modes: { ECHO: 0, ECHONL: 0, ONLCR: 0 } },
+        (error, channel) => {
+          if (error) {
+            reject(new SshClaudeDiagnosticFailure('shell_refused'))
+          } else if (this.closed) {
+            channel.on('error', () => {})
+            channel.close()
+            reject(new SshClaudeDiagnosticFailure('cancelled'))
+          } else {
+            this.observe('shell_opened')
+            resolve({ channel, shell: true })
+          }
+        }
+      )
     })
   }
 

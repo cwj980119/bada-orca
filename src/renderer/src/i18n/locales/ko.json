@@ -248,6 +248,10 @@
       "commandRefused": "SSH 로그인은 성공했지만 서버가 명령 실행 채널을 거절했습니다. 이 계정의 비대화형 SSH 명령 허용 여부를 확인하세요.",
       "sshProtocol": "SSH 테스트 명령의 확인 표식이 돌아오지 않았습니다. 접속 메뉴, 강제 명령 또는 명령 실행을 대체하는 셸 출력을 확인하세요.",
       "event": {
+        "execRefused": "exec 요청 거절됨·터미널 셸로 전환",
+        "shellOpening": "대화형 터미널 셸 접속 요청",
+        "shellOpened": "대화형 터미널 셸 접속 완료",
+        "shellReady": "로그인 셸 준비 완료·명령 전달",
         "passwordMode": "비밀번호 옵션을 받음(값은 숨김)",
         "keyMode": "기존 키·SSO 인증 사용",
         "configReading": "OpenSSH 설정 읽는 중",
@@ -262,7 +266,9 @@
         "commandOpened": "서버 명령 실행 채널 열기 완료",
         "commandCompleted": "서버 명령 실행 성공",
         "proxyUnsupported": "비밀번호 검사에서 ProxyUseFdpass 미지원"
-      }
+      },
+      "shellRefused": "서버가 exec 요청과 터미널 셸 접속을 모두 거절했습니다. 이 계정의 SSH 세션 권한을 확인하세요.",
+      "shellProtocol": "터미널 셸이 명령 완료 표식 없이 종료됐습니다. 로그인 셸, POSIX /bin/sh 지원과 접속 메뉴를 확인하세요. 실행한 명령을 다시 보내지는 않았습니다."
     }
   },
   "agentLaunch": {

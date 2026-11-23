@@ -248,7 +248,11 @@
         "commandOpening": "Requesting a remote command channel",
         "commandOpened": "Remote command channel opened",
         "commandCompleted": "Remote command completed successfully",
-        "proxyUnsupported": "ProxyUseFdpass is unsupported for password tests"
+        "proxyUnsupported": "ProxyUseFdpass is unsupported for password tests",
+        "execRefused": "Exec request refused; switching to a terminal shell",
+        "shellOpening": "Requesting an interactive terminal shell",
+        "shellOpened": "Interactive terminal shell opened",
+        "shellReady": "Logged-in shell ready; delivering the command"
       },
       "resolvedPort": "Resolved SSH port: {{port}}",
       "connectionLog": "Connection details",
@@ -262,7 +266,9 @@
       "authenticationMethod": "The server requires an authentication method other than password or keyboard-interactive. A key or another factor may be required.",
       "interactiveAuthentication": "The server requested an additional or unsupported interactive answer. No password was substituted for an OTP or confirmation prompt.",
       "commandRefused": "SSH login succeeded, but the server refused a remote command channel. Check whether this account allows non-interactive SSH commands.",
-      "sshProtocol": "SSH did not return the test command marker. Check for a login menu, forced command, or shell output that replaces command execution."
+      "sshProtocol": "SSH did not return the test command marker. Check for a login menu, forced command, or shell output that replaces command execution.",
+      "shellRefused": "The server refused both exec and terminal-shell channels. Check this account’s SSH session permissions.",
+      "shellProtocol": "The terminal shell closed without a command completion marker. Check the login shell, POSIX /bin/sh support, and any login menu. The command was not retried."
     }
   },
   "agentLaunch": {

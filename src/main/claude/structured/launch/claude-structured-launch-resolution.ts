@@ -1,4 +1,6 @@
 import { claudeBotSessionOptions } from './claude-bot-session-options'
+import { claudeRewindForkOptions } from './claude-structured-rewind-options'
+import { withClaudeSettingsEnvironment } from '../../configuration/claude-settings-environment'
 import { withBotLaunchToolsEnv } from '../../../bots/bot-launch-tools'
 import type { ClaudeAccountRecipe } from '../../../../shared/agent-session/lifecycle/accounts/agent-session-acquired-account'
 import { prepareClaudeLaunchAccount } from './claude-launch-account'
@@ -40,10 +42,7 @@ import { withNativeChatVisualsEnv } from '../../../native-chat/conversation-file
 import { claudeLaunchResumesTranscript } from './claude-structured-launch-home'
 import type { StructuredAgentLaunchPartResolver } from '../../../runtime/agent-session/launch/structured-agent-launch-composition'
 import { claudeSessionIdForOrcaSession } from '../lifecycle/claude-structured-session-id'
-import {
-  pendingAgentSessionRewindFork,
-  type AgentSessionRewindFork
-} from '../../../../shared/agent-session/lifecycle/rewind/agent-session-rewind'
+import { pendingAgentSessionRewindFork } from '../../../../shared/agent-session/lifecycle/rewind/agent-session-rewind'
 
 export const CLAUDE_SESSION_STATE_EVENTS_ENV = 'CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS'
 type ClaudePermissionOptions = Pick<ClaudeAgentSdkOptions, 'permissionMode' | 'extraArgs'>
@@ -250,7 +249,11 @@ export function claudeStructuredLaunchPart(
     const resumedWithoutRouter = router ? undefined : await resumes(accountHome.path)
     // Resolve auth after awaited launch preparation; account routing is rechecked below.
     const tools = await basis.toolServers()
-    const { command, prefixArgs, env } = await resolveClaudeStructuredInvocation(
+    const {
+      command,
+      prefixArgs,
+      env: accountEnv
+    } = await resolveClaudeStructuredInvocation(
       envDeps,
       (base) =>
         withNativeChatVisualsEnv(
@@ -267,8 +270,9 @@ export function claudeStructuredLaunchPart(
       sources,
       { runtimeOnPath: false }
     )
-    const accountRecipe = await prepareClaudeLaunchAccount(router, env, accountHome.path)
+    const accountRecipe = await prepareClaudeLaunchAccount(router, accountEnv, accountHome.path)
     const launchHome = accountRecipe.home
+    const env = await withClaudeSettingsEnvironment(accountEnv, launchHome)
     // Read the config of the account directory the spawn pins, as session acquisition does.
     const chromeArgs = await claudeInChromeDefaultArgs(
       { ...env, ...claudeConfigDirEnvPatch(launchHome, { env }) },
@@ -328,13 +332,4 @@ export function claudeStructuredLaunchPart(
       cliRuntimeCommand: command
     }
   }
-}
-
-/** Until Claude writes the rewind's session, each launch forks it from the kept conversation. */
-function claudeRewindForkOptions(
-  fork: AgentSessionRewindFork
-): Pick<ClaudeStructuredSdkOptions, 'resume' | 'resumeSessionAt' | 'forkSession'> {
-  return fork.throughEntryId
-    ? { resume: fork.sourceSessionId, resumeSessionAt: fork.throughEntryId, forkSession: true }
-    : {}
 }

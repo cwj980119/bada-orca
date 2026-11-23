@@ -3,6 +3,14 @@ import type { SshClaudeDiagnosticProblem } from '../../../../../shared/intranet/
 
 export function sshClaudeProblemCopy(problem: SshClaudeDiagnosticProblem, t: Translate): string {
   const messages: Record<SshClaudeDiagnosticProblem, string> = {
+    shell_refused: t(
+      'intranet.sshClaude.shellRefused',
+      'The server refused both exec and terminal-shell channels. Check this account’s SSH session permissions.'
+    ),
+    shell_protocol: t(
+      'intranet.sshClaude.shellProtocol',
+      'The terminal shell closed without a command completion marker. Check the login shell, POSIX /bin/sh support, and any login menu. The command was not retried.'
+    ),
     ssh_unavailable: t(
       'intranet.sshClaude.sshUnavailable',
       'OpenSSH could not start. Check that ssh is installed on this PC.'

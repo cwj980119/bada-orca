@@ -1,8 +1,7 @@
 import { join } from 'node:path'
+import { withClaudeSettingsEnvironment } from '../configuration/claude-settings-environment'
 import { agentModelCatalogInputStamp } from '../../native-chat/agent-model-catalog/agent-model-catalog-input-stamp'
 import { withOrcaClaudeChatEntrypoint } from '../../../shared/agent-launch/startup/claude-chat-entrypoint'
-import { waitForPromiseWithSignal } from '../../../shared/concurrency/abort-signal-reason'
-import type { ClaudeCliLaunch } from '../cli-capabilities/claude-cli-flag-support'
 import {
   assertStructuredAgentResolutionCurrent,
   type StructuredAgentResolutionOperation
@@ -23,15 +22,9 @@ import {
   envWithPathRelativeTo,
   catalogListingDirectory
 } from '../../../shared/shell/command-resolution/node-cli-command-resolution'
-import {
-  resolveClaudeStructuredInvocation,
-  type ClaudeStructuredLaunchPartDeps
-} from '../structured/launch/claude-structured-launch-resolution'
+import { resolveClaudeStructuredInvocation } from '../structured/launch/claude-structured-launch-resolution'
 import { CLAUDE_DEFAULT_SETTING_SOURCES } from '../structured/launch/claude-discovery-options'
-import {
-  resolveClaudeChildEnvSources,
-  type ClaudeEnvDeps
-} from '../structured/launch/claude-structured-child-env'
+import { resolveClaudeChildEnvSources } from '../structured/launch/claude-structured-child-env'
 import type {
   AgentModelCatalogProgress,
   AgentModelCatalogProbe,
@@ -44,83 +37,8 @@ import {
   runAgentModelCatalogListing
 } from '../../native-chat/agent-model-catalog/agent-model-catalog-probe-runner'
 
-export type ClaudeModelCatalogProbeDeps = ClaudeEnvDeps &
-  Pick<ClaudeStructuredLaunchPartDeps, 'resolveAuthPolicy'> & {
-    /** Existing captured environment only: saved preference reads never recover a missing CLI. */
-    resolveSavedEnvironment?: () => Promise<Record<string, string>>
-    resolveLaunchArgs?: () => Promise<string[]> | string[]
-    /** Test seam; production runs the shared supervised listing. */
-    runListing?: typeof runAgentModelCatalogListing
-  }
-
-// Use the session's binary, environment and account for one-shot control requests.
-export async function runClaudeListing(
-  deps: ClaudeModelCatalogProbeDeps,
-  request: {
-    accountHomePath: string
-    stdin: string
-    site: string
-    cwd?: string
-    signal?: AbortSignal
-    isCurrent?: () => boolean
-    /** Flags that decide what this CLI loads (a chat's discovery options), read for the resolved CLI. */
-    discovery?: (launch: ClaudeCliLaunch) => Promise<readonly string[]>
-  }
-): Promise<string> {
-  // Explicitly pinning the default directory changes the CLI's Keychain identity.
-  const { command, prefixArgs, env } = await waitForPromiseWithSignal(
-    resolveClaudeStructuredInvocation({ ...deps, signal: request.signal }, (base) => ({
-      ...base,
-      ...claudeConfigDirEnvPatch(request.accountHomePath, { env: base })
-    })),
-    request.signal
-  )
-  const discoveryArgs = request.discovery
-    ? await waitForPromiseWithSignal(
-        request.discovery({ command, prefixArgs, cwd: request.cwd ?? process.cwd(), env }),
-        request.signal
-      )
-    : []
-  const run = (args: readonly string[]) => {
-    request.signal?.throwIfAborted()
-    if (request.isCurrent && !request.isCurrent()) {
-      throw new Error('Listing context retired')
-    }
-    return (deps.runListing ?? runAgentModelCatalogListing)(
-      {
-        command,
-        args: [...prefixArgs, ...args],
-        stdin: request.stdin,
-        ...(request.cwd ? { cwd: request.cwd } : {})
-      },
-      {
-        site: request.site,
-        inheritedEnv: withOrcaClaudeChatEntrypoint(env, process.platform),
-        signal: request.signal
-      }
-    )
-  }
-  const result = await runClaudeBackgroundAttempts({
-    agentId: 'claude',
-    run: (strictMcp) =>
-      run([...buildClaudeModelListArgs(strictMcp, discoveryArgs), ...discoveryArgs]).catch(
-        (error: unknown) => {
-          if (error instanceof AgentModelCatalogProbeError) {
-            return error
-          }
-          throw error
-        }
-      ),
-    failedExit: (outcome) =>
-      outcome instanceof AgentModelCatalogProbeError && outcome.reason === 'exit'
-        ? outcome.failedExit
-        : undefined
-  })
-  if (result instanceof AgentModelCatalogProbeError) {
-    throw result
-  }
-  return result
-}
+import type { ClaudeModelCatalogProbeDeps } from './claude-control-listing'
+export { runClaudeListing, type ClaudeModelCatalogProbeDeps } from './claude-control-listing'
 
 // List models and settings with the same resolved executable, environment and account as sessions.
 export function createClaudeModelCatalogProbe(
@@ -160,7 +78,12 @@ export function createClaudeModelCatalogProbe(
     }
     const sources = await resolveClaudeChildEnvSources(launchDeps)
     assertStructuredAgentResolutionCurrent(operation)
-    const { command, prefixArgs, env, account } = await resolveClaudeStructuredInvocation(
+    const {
+      command,
+      prefixArgs,
+      env: inherited,
+      account
+    } = await resolveClaudeStructuredInvocation(
       launchDeps,
       (base) => ({
         ...base,
@@ -173,6 +96,10 @@ export function createClaudeModelCatalogProbe(
     assertStructuredAgentResolutionCurrent(operation)
     // A command line that may name files relative to the chat's folder runs there, reading only
     // user settings so the project's settings never narrow the account's list.
+    const env = await withClaudeSettingsEnvironment(
+      inherited,
+      requireLegacyAgentSessionAccountHome(accountHome).path
+    )
     const listIn = catalogListingDirectory(
       command,
       [...prefixArgs, ...userArgs],

@@ -1,13 +1,10 @@
 import type { SshTarget } from '../../../shared/remote-runtime/ssh/ssh-types'
-import type {
-  SshClaudeDiagnosticProblem,
-  SshClaudeConnectionObserver
-} from '../../../shared/intranet/ssh-claude-diagnostic'
-import { spawnSystemSshCommand } from '../system-transport/system-ssh-command'
-import { StringDecoder } from 'node:string_decoder'
-import type { ClientChannel } from 'ssh2'
+import type { SshClaudeConnectionObserver } from '../../../shared/intranet/ssh-claude-diagnostic'
+import { spawnSystemSshCommand, spawnSystemSshShell } from '../system-transport/system-ssh-command'
 import { SshClaudePasswordSession } from './ssh-claude-password-session'
 import { SshClaudeDiagnosticFailure, sshClaudeFailure } from './ssh-claude-failure'
+import { readSshClaudeChannel, type SshClaudeOpenedChannel } from './ssh-claude-channel'
+import { sshGArgsForHost } from '../config/ssh-g-config-resolution'
 export { SshClaudeDiagnosticFailure } from './ssh-claude-failure'
 
 export type SshDiagnosticReply = { stdout: string; code: number | null }
@@ -22,103 +19,61 @@ export function sshDiagnosticTransport(
   target: SshTarget,
   password?: string,
   observeConnection: SshClaudeConnectionObserver = () => {}
-): {
-  execute: SshDiagnosticExecute
-  close: () => void
-} {
+): { execute: SshDiagnosticExecute; close: () => void } {
   const session =
     password === undefined
       ? null
       : new SshClaudePasswordSession(target, password, observeConnection)
-  const execute: SshDiagnosticExecute = (command, timeoutMs, signal, observe) =>
-    new Promise((resolve, reject) => {
-      if (signal?.aborted) {
-        reject(new SshClaudeDiagnosticFailure('cancelled'))
-        return
+  let systemShell = false
+  const configArgs = sshGArgsForHost(target.configHost || target.host)
+  const options = {
+    nonInteractive: true,
+    disableControlMaster: true,
+    keepAlive: true,
+    ...(configArgs[0] === '-F' ? { configFile: configArgs[1] } : {})
+  }
+  const openSystem = (command: string): SshClaudeOpenedChannel => {
+    try {
+      observeConnection('connecting')
+      if (systemShell) {
+        observeConnection('shell_opening')
+        return { channel: spawnSystemSshShell(target, options), shell: true, systemSsh: true }
       }
-      observeConnection(session ? 'password_mode' : 'key_or_sso_mode')
-      let channel: ClientChannel | undefined
-      let stdout = ''
-      const decoder = new StringDecoder('utf8')
-      let stderr = ''
-      let settled = false
-      const finish = (reply?: SshDiagnosticReply, problem?: SshClaudeDiagnosticProblem): void => {
-        if (settled) {
-          return
-        }
-        settled = true
-        clearTimeout(timer)
-        signal?.removeEventListener('abort', abort)
-        if (problem) {
-          channel?.close()
-          reject(new SshClaudeDiagnosticFailure(problem))
-        } else {
-          resolve(reply!)
-        }
+      return {
+        channel: spawnSystemSshCommand(target, command, { ...options, closeStdin: true }),
+        systemSsh: true
       }
-      const abort = (): void => finish(undefined, 'cancelled')
-      const timer = setTimeout(() => finish(undefined, 'timed_out'), timeoutMs)
-      signal?.addEventListener('abort', abort, { once: true })
-      const attach = (opened: ClientChannel): void => {
-        if (settled) {
-          opened.close()
-          return
-        }
-        channel = opened
-        channel.on('data', (data: Buffer) => {
-          if (settled) {
-            return
-          }
-          stdout += decoder.write(data)
-          if (Buffer.byteLength(stdout) > 256 * 1024) {
-            finish(undefined, 'output_limit')
-            return
-          }
-          observe?.(stdout)
-        })
-        channel.stderr.on('data', (data: Buffer) => {
-          if (stderr.length < 8192) {
-            stderr += data.toString('utf8').slice(0, 8192 - stderr.length)
-          }
-        })
-        channel.on('error', (error: Error) => finish(undefined, sshClaudeFailure(error)))
-        channel.stderr.on('error', (error: Error) => finish(undefined, sshClaudeFailure(error)))
-        channel.once('close', (code: number | null) => {
-          if (!session && code === 255) {
-            finish(undefined, sshClaudeFailure(stderr))
-          } else {
-            if (code === 0) {
-              if (!session) {
-                observeConnection('authenticated')
-              }
-              observeConnection('command_completed')
-            }
-            finish({ stdout, code })
-          }
-        })
+    } catch {
+      throw new SshClaudeDiagnosticFailure('ssh_unavailable')
+    }
+  }
+  const execute: SshDiagnosticExecute = async (command, timeoutMs, signal, observe) => {
+    observeConnection(session ? 'password_mode' : 'key_or_sso_mode')
+    const started = Date.now()
+    const read = () =>
+      readSshClaudeChannel(
+        () => (session ? session.open(command) : openSystem(command)),
+        command,
+        Math.max(1, timeoutMs - (Date.now() - started)),
+        signal,
+        observe,
+        observeConnection
+      )
+    try {
+      return await read()
+    } catch (error) {
+      if (
+        session ||
+        systemShell ||
+        signal?.aborted ||
+        sshClaudeFailure(error) !== 'command_refused'
+      ) {
+        throw error
       }
-      if (session) {
-        void session.open(command).then(attach, (error: unknown) => {
-          finish(undefined, sshClaudeFailure(error))
-        })
-      } else {
-        try {
-          observeConnection('connecting')
-          attach(
-            spawnSystemSshCommand(target, command, {
-              nonInteractive: true,
-              disableControlMaster: true,
-              keepAlive: true,
-              closeStdin: true
-            })
-          )
-        } catch {
-          finish(undefined, 'ssh_unavailable')
-        }
-      }
-      if (signal?.aborted) {
-        abort()
-      }
-    })
+      systemShell = true
+      observeConnection('exec_refused')
+      return read()
+    }
+  }
   return { execute, close: () => session?.close() }
 }

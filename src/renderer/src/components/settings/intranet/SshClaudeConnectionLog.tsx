@@ -48,6 +48,19 @@ export function SshClaudeConnectionLog({
     proxy_unsupported: t(
       'intranet.sshClaude.event.proxyUnsupported',
       'ProxyUseFdpass is unsupported for password tests'
+    ),
+    exec_refused: t(
+      'intranet.sshClaude.event.execRefused',
+      'Exec request refused; switching to a terminal shell'
+    ),
+    shell_opening: t(
+      'intranet.sshClaude.event.shellOpening',
+      'Requesting an interactive terminal shell'
+    ),
+    shell_opened: t('intranet.sshClaude.event.shellOpened', 'Interactive terminal shell opened'),
+    shell_ready: t(
+      'intranet.sshClaude.event.shellReady',
+      'Logged-in shell ready; delivering the command'
     )
   }
   return (

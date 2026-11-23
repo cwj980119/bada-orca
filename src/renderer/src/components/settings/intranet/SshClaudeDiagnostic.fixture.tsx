@@ -37,6 +37,36 @@ export const completed = defineFixture({
   )
 })
 
+export const terminalShellPassed = defineFixture({
+  width: 640,
+  render: () => (
+    <div className="settings-view-shell bg-background p-8">
+      <SshClaudeDiagnosticResultView
+        result={{
+          ...passed,
+          claudeVersion: undefined,
+          stopVerified: undefined,
+          mode: 'ssh',
+          port: 22,
+          remoteDirectory: '/home/example',
+          events: [
+            'password_mode',
+            'config_resolved',
+            'authenticated',
+            'command_opening',
+            'exec_refused',
+            'shell_opening',
+            'shell_opened',
+            'shell_ready',
+            'command_completed'
+          ],
+          steps: [{ phase: 'ssh', state: 'passed' }]
+        }}
+      />
+    </div>
+  )
+})
+
 export const passwordFailure = defineFixture({
   width: 640,
   render: () => (

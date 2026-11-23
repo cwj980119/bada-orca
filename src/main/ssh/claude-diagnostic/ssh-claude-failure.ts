@@ -12,6 +12,9 @@ export function sshClaudeFailure(error: unknown): SshClaudeDiagnosticProblem {
   }
   const message = typeof error === 'string' ? error : error instanceof Error ? error.message : ''
   const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined
+  if (/exec request failed|cannot execute remote command/i.test(message)) {
+    return 'command_refused'
+  }
   if (
     code === 'ENOTFOUND' ||
     code === 'EAI_AGAIN' ||

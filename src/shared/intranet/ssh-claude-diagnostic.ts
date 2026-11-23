@@ -45,6 +45,10 @@ export type SshClaudeConnectionEvent =
   | 'command_opened'
   | 'command_completed'
   | 'proxy_unsupported'
+  | 'exec_refused'
+  | 'shell_opening'
+  | 'shell_opened'
+  | 'shell_ready'
 export type SshClaudeConnectionObserver = (event: SshClaudeConnectionEvent, port?: number) => void
 export type SshClaudeDiagnosticProblem =
   | 'ssh_unavailable'
@@ -61,6 +65,8 @@ export type SshClaudeDiagnosticProblem =
   | 'interactive_authentication'
   | 'command_refused'
   | 'ssh_protocol'
+  | 'shell_refused'
+  | 'shell_protocol'
   | 'linux_required'
   | 'directory_missing'
   | 'claude_missing'
