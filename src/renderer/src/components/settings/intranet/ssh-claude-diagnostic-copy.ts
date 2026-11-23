@@ -19,6 +19,46 @@ export function sshClaudeProblemCopy(problem: SshClaudeDiagnosticProblem, t: Tra
       'intranet.sshClaude.sshFailed',
       'SSH could not complete the request. Check the destination, network, and SSH configuration.'
     ),
+    ssh_configuration: t(
+      'intranet.sshClaude.sshConfiguration',
+      'Could not resolve the OpenSSH configuration, or it uses unsupported ProxyUseFdpass. Password authentication has not completed.'
+    ),
+    dns_failed: t(
+      'intranet.sshClaude.dnsFailed',
+      'The SSH host name could not be resolved. Check the host or SSH alias.'
+    ),
+    connection_refused: t(
+      'intranet.sshClaude.connectionRefused',
+      'The SSH connection was refused before authentication. Check the resolved port and SSH service.'
+    ),
+    network_unreachable: t(
+      'intranet.sshClaude.networkUnreachable',
+      'The SSH server is unreachable. Check the company network or VPN route.'
+    ),
+    connection_reset: t(
+      'intranet.sshClaude.connectionReset',
+      'The server or network closed the SSH connection. Check the last completed connection stage.'
+    ),
+    ssh_negotiation: t(
+      'intranet.sshClaude.sshNegotiation',
+      'SSH encryption negotiation failed before password authentication. Compare with a normal OpenSSH terminal connection; the server may require different algorithms.'
+    ),
+    authentication_method: t(
+      'intranet.sshClaude.authenticationMethod',
+      'The server requires an authentication method other than password or keyboard-interactive. A key or another factor may be required.'
+    ),
+    interactive_authentication: t(
+      'intranet.sshClaude.interactiveAuthentication',
+      'The server requested an additional or unsupported interactive answer. No password was substituted for an OTP or confirmation prompt.'
+    ),
+    command_refused: t(
+      'intranet.sshClaude.commandRefused',
+      'SSH login succeeded, but the server refused a remote command channel. Check whether this account allows non-interactive SSH commands.'
+    ),
+    ssh_protocol: t(
+      'intranet.sshClaude.sshProtocol',
+      'SSH did not return the test command marker. Check for a login menu, forced command, or shell output that replaces command execution.'
+    ),
     linux_required: t(
       'intranet.sshClaude.linuxRequired',
       'This diagnostic requires a Linux SSH server.'

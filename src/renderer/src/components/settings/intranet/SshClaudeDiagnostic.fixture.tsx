@@ -11,6 +11,7 @@ const passed: SshClaudeDiagnosticResult = {
   claudeVersion: '2.1.0',
   stopVerified: true,
   steps: [
+    { phase: 'ssh', state: 'passed' },
     { phase: 'connection', state: 'passed' },
     { phase: 'response', state: 'passed' },
     { phase: 'resume', state: 'passed' },
@@ -32,6 +33,65 @@ export const completed = defineFixture({
   render: () => (
     <div className="settings-view-shell bg-background p-8">
       <SshClaudeDiagnosticResultView result={passed} />
+    </div>
+  )
+})
+
+export const passwordFailure = defineFixture({
+  width: 640,
+  render: () => (
+    <div className="settings-view-shell bg-background p-8">
+      <SshClaudeDiagnosticResultView
+        result={{
+          ...passed,
+          state: 'failed',
+          claudeVersion: undefined,
+          stopVerified: undefined,
+          mode: 'ssh',
+          port: 22,
+          events: [
+            'password_mode',
+            'config_reading',
+            'config_resolved',
+            'connecting',
+            'host_verified',
+            'password_offered'
+          ],
+          problem: 'authentication',
+          steps: [{ phase: 'ssh', state: 'failed', problem: 'authentication' }]
+        }}
+      />
+    </div>
+  )
+})
+
+export const sshOnlyPassed = defineFixture({
+  width: 640,
+  render: () => (
+    <div className="settings-view-shell bg-background p-8">
+      <SshClaudeDiagnosticResultView
+        result={{
+          ...passed,
+          claudeVersion: undefined,
+          stopVerified: undefined,
+          mode: 'ssh',
+          port: 22,
+          remoteDirectory: '/home/example',
+          events: [
+            'password_mode',
+            'config_reading',
+            'config_resolved',
+            'connecting',
+            'host_verified',
+            'password_offered',
+            'authenticated',
+            'command_opening',
+            'command_opened',
+            'command_completed'
+          ],
+          steps: [{ phase: 'ssh', state: 'passed' }]
+        }}
+      />
     </div>
   )
 })

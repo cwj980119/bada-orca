@@ -1,8 +1,32 @@
 import { describe, expect, it } from 'vitest'
-import { readClaudeDiagnosticResult } from './ssh-claude-diagnostic-job'
+import { readClaudeDiagnosticResult, SshClaudeDiagnosticJob } from './ssh-claude-diagnostic-job'
 import { sshClaudeDiagnosticReport } from '../../../shared/intranet/ssh-claude-diagnostic'
 
 describe('SSH Claude diagnostic replies', () => {
+  it('tests SSH without Claude or a known project path, and excludes the discovered path from copied results', async () => {
+    const job = new SshClaudeDiagnosticJob(
+      {
+        destination: 'fixture-server',
+        directory: '',
+        executable: 'claude',
+        timeoutSeconds: 60,
+        mode: 'ssh'
+      },
+      async (command) => {
+        const marker = command.match(/orca-diag-[a-f0-9-]+:ssh-ready/)?.[0]
+        if (!marker) {
+          throw new Error('Only the SSH probe may run')
+        }
+        return { code: 0, stdout: `Login banner\n${marker}\n/server/login-folder\n` }
+      }
+    )
+    await job.run()
+    const result = job.snapshot()
+    expect(result.state).toBe('passed')
+    expect(result.steps).toEqual([{ phase: 'ssh', state: 'passed' }])
+    expect(result.remoteDirectory).toBe('/server/login-folder')
+    expect(sshClaudeDiagnosticReport(result)).not.toContain('/server/login-folder')
+  })
   it('reads the result after the owned process marker and a login banner', () => {
     expect(
       readClaudeDiagnosticResult(

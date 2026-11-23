@@ -7,6 +7,7 @@ import type * as SshConfigResolution from '../config/ssh-g-config-resolution'
 import type * as HostKeyVerification from '../host-keys/ssh2-host-key-verification'
 import { readHostKeyTrustSources } from '../host-keys/ssh2-host-key-verification'
 import { sshDiagnosticTransport } from './ssh-claude-transport'
+import type { SshClaudeConnectionEvent } from '../../../shared/intranet/ssh-claude-diagnostic'
 
 vi.mock('../config/ssh-g-config-resolution', async (original) => ({
   ...(await original<typeof SshConfigResolution>()),
@@ -47,53 +48,74 @@ afterEach(async () => {
   }
 })
 
-async function fixture(mode: 'password' | 'keyboard-interactive' | 'otp' | 'stall' = 'password') {
+async function fixture(
+  mode:
+    | 'password'
+    | 'keyboard-interactive'
+    | 'otp'
+    | 'stall'
+    | 'command-refused'
+    | 'legacy-kex' = 'password'
+) {
   let offeredSecret: string | undefined
+  const events: SshClaudeConnectionEvent[] = []
   let notifyAuthentication: () => void = () => {}
   const authenticationRequested = new Promise<void>((resolve) => {
     notifyAuthentication = resolve
   })
-  server = new Server({ hostKeys: [hostKey] }, (client) => {
-    clients.add(client)
-    client.on('error', () => {})
-    client.on('authentication', (context) => {
-      notifyAuthentication()
-      if (mode === 'stall') {
-        return
-      }
-      if (mode !== 'password' && context.method === 'keyboard-interactive') {
-        context.prompt(
-          [{ prompt: mode === 'otp' ? 'OTP: ' : 'Password: ', echo: false }],
-          (answers) => {
-            offeredSecret = answers[0]
-            if (answers[0] === 'temporary-test-secret') {
-              context.accept()
-            } else {
-              context.reject()
-            }
-          }
-        )
-      } else if (mode === 'password' && context.method === 'password') {
-        offeredSecret = context.password
-        if (context.username === 'fixture-user' && context.password === 'temporary-test-secret') {
-          context.accept()
-        } else {
-          context.reject(['password'])
+  server = new Server(
+    {
+      hostKeys: [hostKey],
+      banner: 'Unauthorized access is forbidden. Actions may be monitored.',
+      ...(mode === 'legacy-kex' ? { algorithms: { kex: ['diffie-hellman-group1-sha1'] } } : {})
+    },
+    (client) => {
+      clients.add(client)
+      client.on('error', () => {})
+      client.on('authentication', (context) => {
+        notifyAuthentication()
+        if (mode === 'stall') {
+          return
         }
-      } else {
-        context.reject([mode === 'password' ? 'password' : 'keyboard-interactive'])
-      }
-    })
-    client.on('ready', () => {
-      client.on('session', (accept) => {
-        accept().on('exec', (acceptExec) => {
-          const channel = acceptExec()
-          channel.exit(0)
-          channel.end('연결됨\n')
+        const keyboard = mode === 'keyboard-interactive' || mode === 'otp'
+        if (keyboard && context.method === 'keyboard-interactive') {
+          context.prompt(
+            [{ prompt: mode === 'otp' ? 'OTP: ' : 'Password: ', echo: false }],
+            (answers) => {
+              offeredSecret = answers[0]
+              if (answers[0] === 'temporary-test-secret') {
+                context.accept()
+              } else {
+                context.reject()
+              }
+            }
+          )
+        } else if (!keyboard && context.method === 'password') {
+          offeredSecret = context.password
+          if (context.username === 'fixture-user' && context.password === 'temporary-test-secret') {
+            context.accept()
+          } else {
+            context.reject(['password'])
+          }
+        } else {
+          context.reject([keyboard ? 'keyboard-interactive' : 'password'])
+        }
+      })
+      client.on('ready', () => {
+        client.on('session', (accept, reject) => {
+          if (mode === 'command-refused') {
+            reject()
+            return
+          }
+          accept().on('exec', (acceptExec) => {
+            const channel = acceptExec()
+            channel.exit(0)
+            channel.end('연결됨\n')
+          })
         })
       })
-    })
-  })
+    }
+  )
   server.listen(0, '127.0.0.1')
   await once(server, 'listening')
   const address = server.address()
@@ -142,19 +164,20 @@ async function fixture(mode: 'password' | 'keyboard-interactive' | 'otp' | 'stal
         username: '',
         port: 22
       },
-      password
+      password,
+      (event) => events.push(event)
     )
     transports.push(transport)
     return transport
   }
-  return { create, offeredSecret: () => offeredSecret, authenticationRequested }
+  return { create, events, offeredSecret: () => offeredSecret, authenticationRequested }
 }
 
 describe('SSH Claude password transport', () => {
   it.each(['password', 'keyboard-interactive'] as const)(
     'executes concurrent diagnostic and stop commands with %s authentication',
     async (mode) => {
-      const { create } = await fixture(mode)
+      const { create, events } = await fixture(mode)
       const transport = create()
       const replies = await Promise.all([
         transport.execute('diagnostic', 3000),
@@ -164,6 +187,8 @@ describe('SSH Claude password transport', () => {
         { stdout: '연결됨\n', code: 0 },
         { stdout: '연결됨\n', code: 0 }
       ])
+      expect(events).toContain('password_mode')
+      expect(events).toContain('authenticated')
     }
   )
 
@@ -188,9 +213,39 @@ describe('SSH Claude password transport', () => {
   it('does not send the password as an OTP answer', async () => {
     const fixtureState = await fixture('otp')
     await expect(fixtureState.create().execute('diagnostic', 3000)).rejects.toThrow(
-      /^authentication$/
+      /^interactive_authentication$/
     )
     expect(fixtureState.offeredSecret()).toBeUndefined()
+  })
+
+  it('reports configuration resolution failure before attempting authentication', async () => {
+    const { create, events } = await fixture()
+    vi.mocked(resolveWithSshG).mockResolvedValue(null)
+    await expect(create().execute('diagnostic', 3000)).rejects.toThrow(/^ssh_configuration$/)
+    expect(events).not.toContain('password_offered')
+  })
+
+  it('reports connection refusal rather than a password error', async () => {
+    const { create, events } = await fixture()
+    const closed = once(server!, 'close')
+    server!.close()
+    await closed
+    server = undefined
+    await expect(create().execute('diagnostic', 3000)).rejects.toThrow(/^connection_refused$/)
+    expect(events).not.toContain('password_offered')
+  })
+
+  it('distinguishes encryption negotiation failure before password authentication', async () => {
+    const { create, events } = await fixture('legacy-kex')
+    await expect(create().execute('diagnostic', 3000)).rejects.toThrow(/^ssh_negotiation$/)
+    expect(events).not.toContain('password_offered')
+  })
+
+  it('distinguishes successful login from a refused command channel', async () => {
+    const { create, events } = await fixture('command-refused')
+    await expect(create().execute('diagnostic', 3000)).rejects.toThrow(/^command_refused$/)
+    expect(events).toContain('authenticated')
+    expect(events).not.toContain('command_opened')
   })
 
   it('cancels while authentication is waiting', async () => {

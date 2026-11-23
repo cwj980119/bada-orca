@@ -4,7 +4,11 @@ import type { SshClaudeDiagnosticInput } from '../../../shared/intranet/ssh-clau
 export function claudeDiagnosticPreflight(input: SshClaudeDiagnosticInput, marker: string): string {
   return [
     `[ "$(uname -s)" = Linux ] || { echo ${quote(`${marker}:linux_required`)}; exit 41; }`,
-    `cd ${quote(input.directory)} 2>/dev/null || { echo ${quote(`${marker}:directory_missing`)}; exit 42; }`,
+    ...(input.directory
+      ? [
+          `cd ${quote(input.directory)} 2>/dev/null || { echo ${quote(`${marker}:directory_missing`)}; exit 42; }`
+        ]
+      : []),
     `command -v ${quote(input.executable)} >/dev/null 2>&1 || { echo ${quote(`${marker}:claude_missing`)}; exit 43; }`,
     `command -v setsid >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1 && command -v sleep >/dev/null 2>&1 && test -r /proc/self/cmdline && setsid -w /bin/sh -c ':' && timeout -k 1 1 /bin/sh -c ':' || { echo ${quote(`${marker}:process_control_missing`)}; exit 44; }`,
     `echo ${quote(`${marker}:version`)}`,
@@ -59,7 +63,7 @@ export function ownedDiagnosticCommand(
     'exit "$result"'
   ].join('\n')
   // Keep the ownership marker on the group leader; its deadline also cleans up after SSH disconnects.
-  return `cd ${quote(directory)} && exec setsid -w /bin/sh -c ${quote(supervisor)} ${quote(marker)} ${args.map(quote).join(' ')}`
+  return `${directory ? `cd ${quote(directory)} && ` : ''}exec setsid -w /bin/sh -c ${quote(supervisor)} ${quote(marker)} ${args.map(quote).join(' ')}`
 }
 
 export function stopDiagnosticCommand(pid: number, marker: string): string {

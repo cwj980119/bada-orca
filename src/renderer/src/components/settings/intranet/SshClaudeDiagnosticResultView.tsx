@@ -1,6 +1,7 @@
 import { useTranslate } from '@/i18n/use-translate'
 import type { SshClaudeDiagnosticResult } from '../../../../../shared/intranet/ssh-claude-diagnostic'
 import { sshClaudeProblemCopy } from './ssh-claude-diagnostic-copy'
+import { SshClaudeConnectionLog } from './SshClaudeConnectionLog'
 
 export function SshClaudeDiagnosticResultView({
   result
@@ -9,7 +10,8 @@ export function SshClaudeDiagnosticResultView({
 }): React.JSX.Element {
   const t = useTranslate()
   const labels = {
-    connection: t('intranet.sshClaude.phaseConnection', 'SSH and Claude version'),
+    ssh: t('intranet.sshClaude.phaseSsh', 'SSH login and command execution'),
+    connection: t('intranet.sshClaude.phaseConnection', 'Claude version and Linux tools'),
     response: t('intranet.sshClaude.phaseResponse', 'Claude response'),
     resume: t('intranet.sshClaude.phaseResume', 'Continue the same conversation'),
     cancellation: t('intranet.sshClaude.phaseCancellation', 'Stop a harmless test process')
@@ -44,6 +46,7 @@ export function SshClaudeDiagnosticResultView({
           </li>
         ))}
       </ol>
+      <SshClaudeConnectionLog result={result} />
       {result.stopVerified === false &&
       !result.steps.some((step) => step.problem === 'stop_unconfirmed') ? (
         <p role="alert" className="text-settings-detail text-destructive">

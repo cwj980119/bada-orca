@@ -29,12 +29,13 @@ export function SshClaudeDiagnostic(): React.JSX.Element {
   const activeId = useRef<string | null>(null)
   const active = result?.state === 'running' || result?.state === 'cancelling'
   const busy = starting || active
+  const credentials = { destination, password: password || undefined }
+  const sshInput = SshClaudeDiagnosticStart.safeParse(credentials)
   const input = SshClaudeDiagnosticStart.safeParse({
-    destination,
+    ...credentials,
     directory,
     executable,
-    timeoutSeconds,
-    password: password || undefined
+    timeoutSeconds
   })
 
   useEffect(() => {
@@ -114,8 +115,9 @@ export function SshClaudeDiagnostic(): React.JSX.Element {
     }
   }, [id, active])
 
-  const start = async (): Promise<void> => {
-    if (!input.success || busy || !ready) {
+  const start = async (mode: 'ssh' | 'full'): Promise<void> => {
+    const selected = mode === 'ssh' ? sshInput : input
+    if (!selected.success || busy || !ready) {
       return
     }
     setStarting(true)
@@ -126,7 +128,7 @@ export function SshClaudeDiagnostic(): React.JSX.Element {
       const next = await callRuntimeRpc<SshClaudeDiagnosticResult>(
         { kind: 'local' },
         'intranet.sshClaudeStart',
-        input.data
+        { ...selected.data, mode }
       )
       if (!mounted.current) {
         void callRuntimeRpc({ kind: 'local' }, 'intranet.sshClaudeCancel', { id: next.id }).catch(
@@ -188,7 +190,7 @@ export function SshClaudeDiagnostic(): React.JSX.Element {
         <p className="text-settings-detail text-muted-foreground">
           {t(
             'intranet.sshClaude.requirements',
-            'Uses this PC’s OpenSSH configuration. Enter an optional SSH password below. The test sends two small model requests with tools disabled; Claude saves its own conversation history. No project files are edited or Orca files uploaded.'
+            'The SSH-only test checks login and a harmless command without a model request. The full test sends two small model requests with tools disabled; Claude saves its own conversation history. Uses the server’s Claude settings and authentication. No Orca files are uploaded.'
           )}
         </p>
         <SshClaudeConnectionFields
@@ -200,13 +202,16 @@ export function SshClaudeDiagnostic(): React.JSX.Element {
         />
         <div className="space-y-2">
           <Label htmlFor="ssh-claude-directory">
-            {t('intranet.sshClaude.directory', 'Linux project directory (absolute path)')}
+            {t('intranet.sshClaude.directory', 'Linux working directory (optional absolute path)')}
           </Label>
           <Input
             id="ssh-claude-directory"
             value={directory}
             disabled={busy}
-            placeholder={t('intranet.sshClaude.directoryPlaceholder', '/home/user/project')}
+            placeholder={t(
+              'intranet.sshClaude.directoryPlaceholder',
+              'Leave blank to use the server default login directory'
+            )}
             autoComplete="off"
             onChange={(event) => setDirectory(event.target.value)}
           />
@@ -241,12 +246,18 @@ export function SshClaudeDiagnostic(): React.JSX.Element {
           <Button
             type="button"
             variant="outline"
-            disabled={busy || !ready || !input.success}
-            onClick={() => void start()}
+            disabled={busy || !ready || !sshInput.success}
+            onClick={() => void start('ssh')}
           >
-            {busy
-              ? t('intranet.sshClaude.testing', 'Testing…')
-              : t('intranet.sshClaude.start', 'Test connection')}
+            {t('intranet.sshClaude.sshOnly', 'Test SSH only (no model request)')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy || !ready || !input.success}
+            onClick={() => void start('full')}
+          >
+            {t('intranet.sshClaude.fullTest', 'Run full Claude test')}
           </Button>
           {active ? (
             <Button
@@ -278,7 +289,7 @@ export function SshClaudeDiagnostic(): React.JSX.Element {
             {copyState === 'copied'
               ? t(
                   'intranet.sshClaude.copied',
-                  'Copied statuses and version only. Host, paths, session IDs, and raw outputs are excluded.'
+                  'Copied statuses, connection stages, port, and version only. Host, paths, credentials, session IDs, and raw outputs are excluded.'
                 )
               : t(
                   'intranet.sshClaude.copyFailed',

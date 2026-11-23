@@ -1,15 +1,14 @@
 import type { SshTarget } from '../../../shared/remote-runtime/ssh/ssh-types'
-import type { SshClaudeDiagnosticProblem } from '../../../shared/intranet/ssh-claude-diagnostic'
+import type {
+  SshClaudeDiagnosticProblem,
+  SshClaudeConnectionObserver
+} from '../../../shared/intranet/ssh-claude-diagnostic'
 import { spawnSystemSshCommand } from '../system-transport/system-ssh-command'
 import { StringDecoder } from 'node:string_decoder'
 import type { ClientChannel } from 'ssh2'
 import { SshClaudePasswordSession } from './ssh-claude-password-session'
-
-export class SshClaudeDiagnosticFailure extends Error {
-  constructor(readonly problem: SshClaudeDiagnosticProblem) {
-    super(problem)
-  }
-}
+import { SshClaudeDiagnosticFailure, sshClaudeFailure } from './ssh-claude-failure'
+export { SshClaudeDiagnosticFailure } from './ssh-claude-failure'
 
 export type SshDiagnosticReply = { stdout: string; code: number | null }
 export type SshDiagnosticExecute = (
@@ -19,34 +18,25 @@ export type SshDiagnosticExecute = (
   observe?: (stdout: string) => void
 ) => Promise<SshDiagnosticReply>
 
-function sshProblem(stderr: string): SshClaudeDiagnosticProblem {
-  if (
-    /permission denied|authentication (?:methods )?failed|no supported authentication|sign_and_send_pubkey/i.test(
-      stderr
-    )
-  ) {
-    return 'authentication'
-  }
-  if (/host key verification failed|remote host identification has changed/i.test(stderr)) {
-    return 'host_key'
-  }
-  return 'ssh_failed'
-}
-
 export function sshDiagnosticTransport(
   target: SshTarget,
-  password?: string
+  password?: string,
+  observeConnection: SshClaudeConnectionObserver = () => {}
 ): {
   execute: SshDiagnosticExecute
   close: () => void
 } {
-  const session = password === undefined ? null : new SshClaudePasswordSession(target, password)
+  const session =
+    password === undefined
+      ? null
+      : new SshClaudePasswordSession(target, password, observeConnection)
   const execute: SshDiagnosticExecute = (command, timeoutMs, signal, observe) =>
     new Promise((resolve, reject) => {
       if (signal?.aborted) {
         reject(new SshClaudeDiagnosticFailure('cancelled'))
         return
       }
+      observeConnection(session ? 'password_mode' : 'key_or_sso_mode')
       let channel: ClientChannel | undefined
       let stdout = ''
       const decoder = new StringDecoder('utf8')
@@ -91,22 +81,29 @@ export function sshDiagnosticTransport(
             stderr += data.toString('utf8').slice(0, 8192 - stderr.length)
           }
         })
-        channel.on('error', () => finish(undefined, 'ssh_failed'))
-        channel.stderr.on('error', () => finish(undefined, 'ssh_failed'))
+        channel.on('error', (error: Error) => finish(undefined, sshClaudeFailure(error)))
+        channel.stderr.on('error', (error: Error) => finish(undefined, sshClaudeFailure(error)))
         channel.once('close', (code: number | null) => {
-          if (code === 255) {
-            finish(undefined, sshProblem(stderr))
+          if (!session && code === 255) {
+            finish(undefined, sshClaudeFailure(stderr))
           } else {
+            if (code === 0) {
+              if (!session) {
+                observeConnection('authenticated')
+              }
+              observeConnection('command_completed')
+            }
             finish({ stdout, code })
           }
         })
       }
       if (session) {
         void session.open(command).then(attach, (error: unknown) => {
-          finish(undefined, sshProblem(error instanceof Error ? error.message : ''))
+          finish(undefined, sshClaudeFailure(error))
         })
       } else {
         try {
+          observeConnection('connecting')
           attach(
             spawnSystemSshCommand(target, command, {
               nonInteractive: true,

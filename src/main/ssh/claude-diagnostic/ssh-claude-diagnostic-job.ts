@@ -1,10 +1,13 @@
 import { randomUUID } from 'node:crypto'
+import { readClaudeDiagnosticResult } from './ssh-claude-reply'
+export { readClaudeDiagnosticResult } from './ssh-claude-reply'
 import { withTimeout } from '../../../shared/concurrency/promise-timeout-fallback'
 import type {
   SshClaudeDiagnosticInput,
   SshClaudeDiagnosticPhase,
   SshClaudeDiagnosticProblem,
-  SshClaudeDiagnosticResult
+  SshClaudeDiagnosticResult,
+  SshClaudeConnectionEvent
 } from '../../../shared/intranet/ssh-claude-diagnostic'
 import {
   claudeDiagnosticCommand,
@@ -25,52 +28,16 @@ type OwnedDiagnostic = {
   stop?: Promise<boolean>
 }
 
-const phases: SshClaudeDiagnosticPhase[] = ['connection', 'response', 'resume', 'cancellation']
+const phases: SshClaudeDiagnosticPhase[] = [
+  'ssh',
+  'connection',
+  'response',
+  'resume',
+  'cancellation'
+]
 
 function failure(problem: SshClaudeDiagnosticProblem): never {
   throw new SshClaudeDiagnosticFailure(problem)
-}
-
-export function readClaudeDiagnosticResult(
-  reply: SshDiagnosticReply,
-  marker: string,
-  sessionId: string
-): string {
-  if (reply.code === 124 || reply.code === 137) {
-    failure('timed_out')
-  }
-  if (reply.code === 143) {
-    failure('remote_terminated')
-  }
-  if (reply.code !== 0) {
-    failure('claude_failed')
-  }
-  const start = reply.stdout.indexOf(`${marker}:pid:`)
-  const lineEnd = reply.stdout.indexOf('\n', start)
-  if (start === -1 || lineEnd === -1) {
-    failure('invalid_response')
-  }
-  let value: unknown
-  try {
-    value = JSON.parse(reply.stdout.slice(lineEnd + 1).trim())
-  } catch {
-    failure('invalid_response')
-  }
-  if (
-    typeof value !== 'object' ||
-    value === null ||
-    !('type' in value) ||
-    value.type !== 'result' ||
-    !('session_id' in value) ||
-    value.session_id !== sessionId ||
-    !('is_error' in value) ||
-    value.is_error !== false ||
-    !('result' in value) ||
-    typeof value.result !== 'string'
-  ) {
-    failure('invalid_response')
-  }
-  return value.result.trim()
 }
 
 export class SshClaudeDiagnosticJob {
@@ -83,16 +50,36 @@ export class SshClaudeDiagnosticJob {
     private readonly input: SshClaudeDiagnosticInput,
     private readonly execute: SshDiagnosticExecute
   ) {
+    const selectedPhases: SshClaudeDiagnosticPhase[] = input.mode === 'ssh' ? ['ssh'] : phases
     this.result = {
       id: randomUUID(),
       state: 'running',
       startedAt: new Date().toISOString(),
-      steps: phases.map((phase) => ({ phase, state: 'pending' }))
+      mode: input.mode ?? 'full',
+      events: [],
+      steps: selectedPhases.map((phase) => ({
+        phase,
+        state: 'pending'
+      }))
     }
   }
 
   snapshot(): SshClaudeDiagnosticResult {
-    return { ...this.result, steps: this.result.steps.map((step) => ({ ...step })) }
+    return {
+      ...this.result,
+      events: [...(this.result.events ?? [])],
+      steps: this.result.steps.map((step) => ({ ...step }))
+    }
+  }
+
+  observeConnection(event: SshClaudeConnectionEvent, port?: number): void {
+    const events = this.result.events!
+    if (!events.includes(event) && events.length < 20) {
+      events.push(event)
+    }
+    if (port && Number.isInteger(port) && port > 0 && port <= 65535) {
+      this.result.port = port
+    }
   }
 
   cancel(): void {
@@ -109,6 +96,11 @@ export class SshClaudeDiagnosticJob {
 
   async run(): Promise<void> {
     try {
+      await this.phase('ssh', () => this.checkSsh())
+      if (this.input.mode === 'ssh') {
+        this.result.state = 'passed'
+        return
+      }
       await this.phase('connection', () => this.preflight())
       const sessionId = randomUUID()
       const token = `ORCA_${randomUUID().replaceAll('-', '')}`
@@ -220,6 +212,22 @@ export class SshClaudeDiagnosticJob {
       failure('invalid_response')
     }
     this.result.claudeVersion = version
+  }
+
+  private async checkSsh(): Promise<void> {
+    const marker = `orca-diag-${randomUUID()}`
+    const reply = await this.execute(
+      `printf '%s\\n' '${marker}:ssh-ready'; pwd -P`,
+      25_000,
+      this.preflightAbort.signal
+    )
+    if (reply.code !== 0 || !reply.stdout.includes(`${marker}:ssh-ready\n`)) {
+      failure('ssh_protocol')
+    }
+    const directory = reply.stdout.split(`${marker}:ssh-ready\n`)[1]?.split('\n')[0]?.trim()
+    if (directory?.startsWith('/') && directory.length <= 2048 && !/[\0\r]/.test(directory)) {
+      this.result.remoteDirectory = directory
+    }
   }
 
   private async owned(
