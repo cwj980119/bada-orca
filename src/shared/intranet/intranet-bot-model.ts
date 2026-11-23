@@ -22,9 +22,7 @@ export function intranetBotModel(
   }
   const allowed =
     agent === 'claude'
-      ? settings.claude.model
-        ? [settings.claude.model]
-        : []
+      ? []
       : agent === 'opencode' || agent === 'opencode2'
         ? intranetOpenCodeModels(settings.opencode).map((model) =>
             intranetOpenCodeModelReference(settings.opencode, model.id)

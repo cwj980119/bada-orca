@@ -11,6 +11,10 @@ export function SshClaudeConnectionLog({
 }): React.JSX.Element {
   const t = useTranslate()
   const labels: Record<SshClaudeConnectionEvent, string> = {
+    native_ssh: t(
+      'intranet.sshClaude.event.nativeSsh',
+      'Running ssh with only the destination; no additional options'
+    ),
     password_mode: t(
       'intranet.sshClaude.event.passwordMode',
       'Password option received (value hidden)'

@@ -51,11 +51,11 @@ export const terminalShellPassed = defineFixture({
           remoteDirectory: '/home/example',
           events: [
             'password_mode',
-            'config_resolved',
-            'authenticated',
-            'command_opening',
-            'exec_refused',
+            'native_ssh',
+            'connecting',
             'shell_opening',
+            'password_offered',
+            'authenticated',
             'shell_opened',
             'shell_ready',
             'command_completed'

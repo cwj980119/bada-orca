@@ -31,6 +31,7 @@ export const SshClaudeDiagnosticHandle = z.object({ id: z.string().uuid() }).str
 export type SshClaudeDiagnosticInput = z.infer<typeof SshClaudeDiagnosticStart>
 export type SshClaudeDiagnosticPhase = 'ssh' | 'connection' | 'response' | 'resume' | 'cancellation'
 export type SshClaudeConnectionEvent =
+  | 'native_ssh'
   | 'password_mode'
   | 'key_or_sso_mode'
   | 'config_reading'
@@ -67,6 +68,7 @@ export type SshClaudeDiagnosticProblem =
   | 'ssh_protocol'
   | 'shell_refused'
   | 'shell_protocol'
+  | 'shell_prompt'
   | 'linux_required'
   | 'directory_missing'
   | 'claude_missing'

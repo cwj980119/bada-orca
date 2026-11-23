@@ -2,6 +2,42 @@ import { expect, it, vi } from 'vitest'
 import { intranetModelDiscovery } from './intranet-model-catalog'
 import { intranetAgentEnvironment } from '../../shared/intranet/intranet-agent-environment'
 import { defaultIntranetSettings } from '../../shared/intranet/intranet-settings'
+import { mkdtemp, writeFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+it('offers the model from the original Claude settings without starting CLI discovery', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'orca-claude-catalog-'))
+  try {
+    await writeFile(
+      join(directory, 'settings.json'),
+      JSON.stringify({
+        model: 'company-from-file',
+        env: { ANTHROPIC_AUTH_TOKEN: 'fixture-private-auth' }
+      })
+    )
+    const discovery = intranetModelDiscovery(
+      'claude',
+      { deps: {} },
+      {
+        kind: 'probe',
+        listingNamesConfiguredModel: true,
+        probe: async () => {
+          throw new Error('Unexpected CLI discovery')
+        }
+      }
+    )
+    if (discovery.kind !== 'probe') {
+      throw new Error('Expected local configuration discovery')
+    }
+    const result = await discovery.probe({ variable: 'CLAUDE_CONFIG_DIR', path: directory })
+    expect(result.configured).toEqual({ model: 'company-from-file' })
+    expect(result.models.map(({ id }) => id)).toEqual(['company-from-file'])
+    expect(JSON.stringify(result)).not.toContain('fixture-private-auth')
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
 
 it('lists registered Codex models and never probes the CLI account catalog', async () => {
   const settings = defaultIntranetSettings()
@@ -70,7 +106,7 @@ it.each(['claude', 'opencode', 'opencode2'])(
       {}
     )
     expect((await discovery.probe(home)).models.map(({ id }) => id)).toEqual([
-      agent === 'claude' ? 'company-override' : 'company/override'
+      agent === 'claude' ? 'company/cli-default' : 'company/override'
     ])
   }
 )

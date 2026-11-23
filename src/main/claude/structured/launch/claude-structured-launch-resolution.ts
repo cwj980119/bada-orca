@@ -1,6 +1,6 @@
 import { claudeBotSessionOptions } from './claude-bot-session-options'
 import { claudeRewindForkOptions } from './claude-structured-rewind-options'
-import { withClaudeSettingsEnvironment } from '../../configuration/claude-settings-environment'
+import { claudeSettingsLaunch } from '../../configuration/claude-settings-environment'
 import { withBotLaunchToolsEnv } from '../../../bots/bot-launch-tools'
 import type { ClaudeAccountRecipe } from '../../../../shared/agent-session/lifecycle/accounts/agent-session-acquired-account'
 import { prepareClaudeLaunchAccount } from './claude-launch-account'
@@ -272,7 +272,7 @@ export function claudeStructuredLaunchPart(
     )
     const accountRecipe = await prepareClaudeLaunchAccount(router, accountEnv, accountHome.path)
     const launchHome = accountRecipe.home
-    const env = await withClaudeSettingsEnvironment(accountEnv, launchHome)
+    const { env, settingsFile } = await claudeSettingsLaunch(accountEnv, launchHome)
     // Read the config of the account directory the spawn pins, as session acquisition does.
     const chromeArgs = await claudeInChromeDefaultArgs(
       { ...env, ...claudeConfigDirEnvPatch(launchHome, { env }) },
@@ -301,6 +301,7 @@ export function claudeStructuredLaunchPart(
           ...CLAUDE_STRUCTURED_BASE_OPTIONS,
           ...permission,
           ...discovery,
+          ...(settingsFile ? { settings: settingsFile } : {}),
           ...(await claudeBotSessionOptions(basis, linked.projects, tools)),
           ...(promptSuggestions ? { promptSuggestions } : {}),
           extraArgs: {

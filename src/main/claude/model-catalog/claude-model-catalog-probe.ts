@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { withClaudeSettingsEnvironment } from '../configuration/claude-settings-environment'
+import { claudeSettingsLaunch } from '../configuration/claude-settings-environment'
 import { agentModelCatalogInputStamp } from '../../native-chat/agent-model-catalog/agent-model-catalog-input-stamp'
 import { withOrcaClaudeChatEntrypoint } from '../../../shared/agent-launch/startup/claude-chat-entrypoint'
 import {
@@ -96,7 +96,7 @@ export function createClaudeModelCatalogProbe(
     assertStructuredAgentResolutionCurrent(operation)
     // A command line that may name files relative to the chat's folder runs there, reading only
     // user settings so the project's settings never narrow the account's list.
-    const env = await withClaudeSettingsEnvironment(
+    const { env, settingsFile } = await claudeSettingsLaunch(
       inherited,
       requireLegacyAgentSessionAccountHome(accountHome).path
     )
@@ -107,7 +107,8 @@ export function createClaudeModelCatalogProbe(
       launchDirectory
     )
     const settingSources = listIn === cwd ? CLAUDE_DEFAULT_SETTING_SOURCES : ['user']
-    const args = argsFor(true, settingSources)
+    const settingsArgs = settingsFile ? ['--settings', settingsFile] : []
+    const args = [...settingsArgs, ...argsFor(true, settingSources)]
     return {
       inputStamp: await agentModelCatalogInputStamp({
         command,
@@ -147,7 +148,7 @@ export function createClaudeModelCatalogProbe(
             return (deps.runListing ?? runAgentModelCatalogListing)(
               {
                 command,
-                args: [...prefixArgs, ...argsFor(strictMcp, settingSources)],
+                args: [...prefixArgs, ...settingsArgs, ...argsFor(strictMcp, settingSources)],
                 ...(listIn ? { cwd: listIn } : {}),
                 stdin: `${CLAUDE_MODEL_LIST_STDIN}${JSON.stringify({ type: 'control_request', request_id: 'orca-model-settings', request: { subtype: 'get_settings' } })}\n${JSON.stringify({ type: 'control_request', request_id: 'orca-signin-discovery', request: { subtype: 'initialize' } })}\n`
               },

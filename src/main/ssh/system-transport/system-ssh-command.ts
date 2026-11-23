@@ -1,5 +1,4 @@
 import { spawn, type ChildProcess } from 'node:child_process'
-import { spawnProcess } from '@orca/process-host'
 import { Duplex } from 'node:stream'
 import type { ClientChannel } from 'ssh2'
 import type { SshTarget } from '../../../shared/remote-runtime/ssh/ssh-types'
@@ -93,19 +92,6 @@ function wrapChildProcess(proc: ChildProcess): SystemSshProcess {
       proc.on('exit', (code) => cb(code))
     }
   }
-}
-
-export function spawnSystemSshShell(
-  target: SshTarget,
-  options?: SystemSshBuildArgsOptions
-): SystemSshCommandChannel {
-  const sshPath = findSystemSsh()
-  if (!sshPath) {
-    throw new Error('OpenSSH is unavailable')
-  }
-  const args = buildSshArgs(target, options)
-  args[args.indexOf('-T')] = '-tt'
-  return wrapCommandProcess(spawnProcess({ program: sshPath, args }))
 }
 
 function wrapCommandProcess(proc: ChildProcess): SystemSshCommandChannel {

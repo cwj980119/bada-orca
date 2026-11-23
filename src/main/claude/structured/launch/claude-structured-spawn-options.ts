@@ -60,6 +60,7 @@ export function claudeStructuredSpawnOptions(input: {
       // New sessions may require Fast opt-in before input; explicit --settings must remain intact.
       if (
         (!decoded || input.launch.resumesTranscript) &&
+        typeof sdkOptions.settings !== 'string' &&
         !Object.hasOwn(sdkOptions.extraArgs ?? {}, 'settings')
       ) {
         options.set('fastMode', fastMode)

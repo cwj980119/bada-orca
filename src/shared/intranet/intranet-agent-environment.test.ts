@@ -99,7 +99,7 @@ describe('internal model launch configuration', () => {
     expect(env.DISABLE_AUTOUPDATER).toBe('1')
   })
 
-  it('routes the primary and auxiliary Claude models to the configured internal model', () => {
+  it('uses the CLI environment instead of legacy company Claude model overrides', () => {
     const env = intranetAgentEnvironment(
       'claude',
       {
@@ -107,12 +107,12 @@ describe('internal model launch configuration', () => {
         opencode: { baseUrl: '', model: '', configVersion: 'v1' },
         claude: { baseUrl: 'http://10.20.0.5:8000', model: 'company-model' }
       },
-      {}
+      { ANTHROPIC_BASE_URL: 'https://local-gateway.internal', ANTHROPIC_MODEL: 'local-model' }
     )
-    expect(env.ANTHROPIC_BASE_URL).toBe('http://10.20.0.5:8000')
-    expect(env.ANTHROPIC_MODEL).toBe('company-model')
-    expect(env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe('company-model')
-    expect(env.ANTHROPIC_SMALL_FAST_MODEL).toBe('company-model')
+    expect(env.ANTHROPIC_BASE_URL).toBe('https://local-gateway.internal')
+    expect(env.ANTHROPIC_MODEL).toBe('local-model')
+    expect(env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBeUndefined()
+    expect(env.ANTHROPIC_SMALL_FAST_MODEL).toBeUndefined()
   })
 
   it('merges OpenCode settings and forces an internal provider without rewriting CLI files', () => {

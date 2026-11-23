@@ -30,18 +30,6 @@ export function intranetAgentEnvironment(
       DISABLE_BUG_COMMAND: '1',
       CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY: '1'
     })
-    if (settings.claude.baseUrl) {
-      result.ANTHROPIC_BASE_URL = settings.claude.baseUrl
-    }
-    if (settings.claude.model) {
-      Object.assign(result, {
-        ANTHROPIC_MODEL: settings.claude.model,
-        ANTHROPIC_SMALL_FAST_MODEL: settings.claude.model,
-        ANTHROPIC_DEFAULT_SONNET_MODEL: settings.claude.model,
-        ANTHROPIC_DEFAULT_HAIKU_MODEL: settings.claude.model,
-        ANTHROPIC_DEFAULT_OPUS_MODEL: settings.claude.model
-      })
-    }
   }
   if (agent === 'opencode' || agent === 'opencode2') {
     Object.assign(result, {

@@ -1,10 +1,11 @@
 import type { SshTarget } from '../../../shared/remote-runtime/ssh/ssh-types'
 import type { SshClaudeConnectionObserver } from '../../../shared/intranet/ssh-claude-diagnostic'
-import { spawnSystemSshCommand, spawnSystemSshShell } from '../system-transport/system-ssh-command'
-import { SshClaudePasswordSession } from './ssh-claude-password-session'
-import { SshClaudeDiagnosticFailure, sshClaudeFailure } from './ssh-claude-failure'
-import { readSshClaudeChannel, type SshClaudeOpenedChannel } from './ssh-claude-channel'
-import { sshGArgsForHost } from '../config/ssh-g-config-resolution'
+import { SshClaudeDiagnosticFailure } from './ssh-claude-failure'
+import {
+  runSshClaudeConsole,
+  spawnSshDiagnosticConsole,
+  type SshDiagnosticConsole
+} from './ssh-claude-console'
 export { SshClaudeDiagnosticFailure } from './ssh-claude-failure'
 
 export type SshDiagnosticReply = { stdout: string; code: number | null }
@@ -20,60 +21,47 @@ export function sshDiagnosticTransport(
   password?: string,
   observeConnection: SshClaudeConnectionObserver = () => {}
 ): { execute: SshDiagnosticExecute; close: () => void } {
-  const session =
-    password === undefined
-      ? null
-      : new SshClaudePasswordSession(target, password, observeConnection)
-  let systemShell = false
-  const configArgs = sshGArgsForHost(target.configHost || target.host)
-  const options = {
-    nonInteractive: true,
-    disableControlMaster: true,
-    keepAlive: true,
-    ...(configArgs[0] === '-F' ? { configFile: configArgs[1] } : {})
-  }
-  const openSystem = (command: string): SshClaudeOpenedChannel => {
-    try {
-      observeConnection('connecting')
-      if (systemShell) {
-        observeConnection('shell_opening')
-        return { channel: spawnSystemSshShell(target, options), shell: true, systemSsh: true }
-      }
-      return {
-        channel: spawnSystemSshCommand(target, command, { ...options, closeStdin: true }),
-        systemSsh: true
-      }
-    } catch {
-      throw new SshClaudeDiagnosticFailure('ssh_unavailable')
-    }
-  }
+  const active = new Set<SshDiagnosticConsole>()
+  let closed = false
+  const destination =
+    target.configHost || (target.username ? `${target.username}@${target.host}` : target.host)
   const execute: SshDiagnosticExecute = async (command, timeoutMs, signal, observe) => {
-    observeConnection(session ? 'password_mode' : 'key_or_sso_mode')
-    const started = Date.now()
-    const read = () =>
-      readSshClaudeChannel(
-        () => (session ? session.open(command) : openSystem(command)),
-        command,
-        Math.max(1, timeoutMs - (Date.now() - started)),
-        signal,
-        observe,
-        observeConnection
-      )
+    if (closed || signal?.aborted) {
+      throw new SshClaudeDiagnosticFailure('cancelled')
+    }
+    observeConnection(password === undefined ? 'key_or_sso_mode' : 'password_mode')
+    observeConnection('native_ssh')
+    observeConnection('connecting')
+    const console = await spawnSshDiagnosticConsole(destination)
+    if (closed || signal?.aborted) {
+      console.kill()
+      throw new SshClaudeDiagnosticFailure('cancelled')
+    }
+    active.add(console)
+    observeConnection('shell_opening')
     try {
-      return await read()
-    } catch (error) {
-      if (
-        session ||
-        systemShell ||
-        signal?.aborted ||
-        sshClaudeFailure(error) !== 'command_refused'
-      ) {
-        throw error
-      }
-      systemShell = true
-      observeConnection('exec_refused')
-      return read()
+      return await runSshClaudeConsole(
+        console,
+        command,
+        timeoutMs,
+        signal,
+        password,
+        observeConnection,
+        observe
+      )
+    } finally {
+      active.delete(console)
     }
   }
-  return { execute, close: () => session?.close() }
+  return {
+    execute,
+    close: () => {
+      closed = true
+      password = undefined
+      for (const console of active) {
+        console.kill()
+      }
+      active.clear()
+    }
+  }
 }

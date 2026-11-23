@@ -4,6 +4,8 @@ import { z } from 'zod'
 import type { AgentModelCatalogSuccess } from '../native-chat/agent-model-catalog/agent-model-catalog-entry'
 import type { StructuredAgentModelCatalogContext } from '../runtime/agent-session/installation/structured-agent-runtime-registration-types'
 import { supportsIntranetCliDefaults } from '../../shared/intranet/intranet-features'
+import { agentSessionAccountHomePath } from '../../shared/agent-session/lifecycle/accounts/agent-session-account-home'
+import { withClaudeSettingsEnvironment } from '../claude/configuration/claude-settings-environment'
 
 type IntranetCatalogContext = {
   deps: Pick<StructuredAgentModelCatalogContext['deps'], 'resolveAgentLaunchEnv'>
@@ -11,9 +13,8 @@ type IntranetCatalogContext = {
 
 function configuredCatalog(
   agent: string,
-  context: IntranetCatalogContext
+  env: Record<string, string>
 ): AgentModelCatalogSuccess | null {
-  const env = context.deps.resolveAgentLaunchEnv?.(agent) ?? {}
   let model = agent === 'claude' ? env.ANTHROPIC_MODEL : undefined
   let registered: { id: string; label: string }[] | undefined
   if (env.ORCA_INTRANET_AGENT_MODELS) {
@@ -70,7 +71,10 @@ export function intranetModelDiscovery(
     kind: 'probe',
     listingNamesConfiguredModel: fallback.kind === 'probe' && fallback.listingNamesConfiguredModel,
     probe: async (home, options) => {
-      const configured = configuredCatalog(agent, context)
+      const inherited = context.deps.resolveAgentLaunchEnv?.(agent) ?? {}
+      const directory = agent === 'claude' ? agentSessionAccountHomePath(home) : null
+      const env = directory ? await withClaudeSettingsEnvironment(inherited, directory) : inherited
+      const configured = configuredCatalog(agent, env)
       if (configured) {
         return configured
       }

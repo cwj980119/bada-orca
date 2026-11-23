@@ -11,7 +11,17 @@ export async function withClaudeSettingsEnvironment(
   environment: Record<string, string>,
   configDirectory: string
 ): Promise<Record<string, string>> {
+  return (await claudeSettingsLaunch(environment, configDirectory)).env
+}
+
+export async function claudeSettingsLaunch(
+  environment: Record<string, string>,
+  configDirectory: string
+): Promise<{ env: Record<string, string>; settingsFile?: string }> {
   const settings = await readSettings(configDirectory)
+  if (!settings) {
+    return { env: environment }
+  }
   const values = isRecord(settings.env) ? settings.env : {}
   const configured = Object.fromEntries(
     Object.entries(values)
@@ -27,10 +37,13 @@ export async function withClaudeSettingsEnvironment(
   if (!configured.ANTHROPIC_MODEL && typeof settings.model === 'string' && settings.model.trim()) {
     configured.ANTHROPIC_MODEL = settings.model.trim()
   }
-  return overlayEnvironmentVariables(configured, environment, process.platform)
+  return {
+    env: overlayEnvironmentVariables(environment, configured, process.platform),
+    settingsFile: join(configDirectory, 'settings.json')
+  }
 }
 
-async function readSettings(directory: string): Promise<Record<string, unknown>> {
+async function readSettings(directory: string): Promise<Record<string, unknown> | null> {
   try {
     const { handle, stats } = await openLocalRegularFile(join(directory, 'settings.json'))
     try {
@@ -46,7 +59,7 @@ async function readSettings(directory: string): Promise<Record<string, unknown>>
     }
   } catch (error) {
     if (isENOENT(error)) {
-      return {}
+      return null
     }
     throw new Error(
       'Claude settings.json could not be read or parsed. Check the selected CLI configuration.'

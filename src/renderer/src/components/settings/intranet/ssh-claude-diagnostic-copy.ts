@@ -95,6 +95,10 @@ export function sshClaudeProblemCopy(problem: SshClaudeDiagnosticProblem, t: Tra
       'intranet.sshClaude.resumeFailed',
       'The resumed conversation did not recall the previous test token.'
     ),
+    shell_prompt: t(
+      'intranet.sshClaude.shellPrompt',
+      'SSH did not reach a recognizable login shell prompt. Check whether the terminal is waiting for authentication, a menu, or another answer.'
+    ),
     timed_out: t('intranet.sshClaude.timedOut', 'The request exceeded the time limit.'),
     remote_terminated: t(
       'intranet.sshClaude.remoteTerminated',

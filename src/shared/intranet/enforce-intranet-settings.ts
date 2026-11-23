@@ -1,8 +1,19 @@
 import type { GlobalSettings } from '../settings/global-settings-types'
 import { isIntranetAgent } from './intranet-features'
 import { TUI_AGENT_CONFIG } from '../agent-launch/catalog/tui-agent-config'
+import { readIntranetSettings } from './intranet-settings'
 
 export function enforceIntranetSettings(settings: GlobalSettings): GlobalSettings {
+  const intranet = readIntranetSettings(settings.intranet)
+  if (intranet.claude.baseUrl || intranet.claude.model) {
+    for (const choices of [settings.agentLaunchChoices, settings.nativeChatSessionOptions]) {
+      if (choices?.claude?.model === intranet.claude.model) {
+        const { model: _model, ...rest } = choices.claude
+        choices.claude = rest
+      }
+    }
+    settings.intranet = { ...intranet, claude: { baseUrl: '', model: '' } }
+  }
   settings.artifactSharingEnabled = false
   settings.agentSkillSharingEnabled = false
   settings.experimentalMobile = false

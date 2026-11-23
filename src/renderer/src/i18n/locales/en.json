@@ -62,10 +62,8 @@
     "allowedHosts": "Allowed hostnames, IP addresses and IPv4 ranges",
     "hostsHelp": "One entry per line. Use hostnames without a scheme or path. This applies to connections made by Orca. CLI tools retain their own network configuration.",
     "opencodeDescription": "Uses the installed OpenCode CLI. Leave these fields empty to keep its existing internal provider and credentials.",
-    "baseUrl": "Model server URL",
     "model": "Model ID",
     "configVersion": "OpenCode configuration format",
-    "claudeDescription": "Use an Anthropic-compatible internal gateway. Leave empty to use the existing CLI configuration and credentials.",
     "applyHelp": "Model and tool changes apply to new agent sessions. Company SSO connects the app account separately. No Orca account is required. Automatic updates, telemetry and public sharing remain disabled.",
     "saving": "Saving…",
     "save": "Save connections",
@@ -94,8 +92,6 @@
     "externalPollingHelp": "In the external CLI, ask the agent to use orca_list_agents, orca_send and orca_receive. Incoming work is read when the agent calls the receive tool; Orca does not type into an unrelated terminal. Acknowledge processed messages with orca_ack.",
     "externalConnected": "Recently connected MCP clients",
     "externalEmpty": "No external MCP clients are connected.",
-    "claudeServerUrl": "Claude Code server URL",
-    "claudeModelId": "Claude Code model ID",
     "opencodeServerUrl": "OpenCode server URL",
     "opencodeApiKeyEnv": "OpenCode API key environment variable",
     "searchDescription": "Internal models, MCP servers, skills, knowledge sources and network settings.",
@@ -252,7 +248,8 @@
         "execRefused": "Exec request refused; switching to a terminal shell",
         "shellOpening": "Requesting an interactive terminal shell",
         "shellOpened": "Interactive terminal shell opened",
-        "shellReady": "Logged-in shell ready; delivering the command"
+        "shellReady": "Logged-in shell ready; delivering the command",
+        "nativeSsh": "Running ssh with only the destination; no additional options"
       },
       "resolvedPort": "Resolved SSH port: {{port}}",
       "connectionLog": "Connection details",
@@ -268,7 +265,18 @@
       "commandRefused": "SSH login succeeded, but the server refused a remote command channel. Check whether this account allows non-interactive SSH commands.",
       "sshProtocol": "SSH did not return the test command marker. Check for a login menu, forced command, or shell output that replaces command execution.",
       "shellRefused": "The server refused both exec and terminal-shell channels. Check this account’s SSH session permissions.",
-      "shellProtocol": "The terminal shell closed without a command completion marker. Check the login shell, POSIX /bin/sh support, and any login menu. The command was not retried."
+      "shellProtocol": "The terminal shell closed without a command completion marker. Check the login shell, POSIX /bin/sh support, and any login menu. The command was not retried.",
+      "shellPrompt": "SSH did not reach a recognizable login shell prompt. Check whether the terminal is waiting for authentication, a menu, or another answer."
+    },
+    "claudeLocal": {
+      "description": "Reference the installed Claude Code settings.json directly, including its model, environment, authentication helpers and other settings. No separate Claude server or model registration is required.",
+      "found": "Settings file found. New Claude sessions reference this file.",
+      "missing": "No settings.json was found at this path. Check the Claude configuration directory in agent settings.",
+      "model": "Configured model: {{model}}",
+      "failed": "Could not read the selected Claude settings. Check the configuration directory and JSON syntax. Configuration contents are not included in this error.",
+      "loading": "Checking settings…",
+      "refresh": "Check settings again",
+      "title": "Claude Code"
     }
   },
   "agentLaunch": {

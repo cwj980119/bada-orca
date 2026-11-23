@@ -1,4 +1,4 @@
-import { withClaudeSettingsEnvironment } from '../configuration/claude-settings-environment'
+import { claudeSettingsLaunch } from '../configuration/claude-settings-environment'
 import { withOrcaClaudeChatEntrypoint } from '../../../shared/agent-launch/startup/claude-chat-entrypoint'
 import { waitForPromiseWithSignal } from '../../../shared/concurrency/abort-signal-reason'
 import type { ClaudeCliLaunch } from '../cli-capabilities/claude-cli-flag-support'
@@ -50,7 +50,7 @@ export async function runClaudeListing(
     })),
     request.signal
   )
-  const env = await withClaudeSettingsEnvironment(inherited, request.accountHomePath)
+  const { env, settingsFile } = await claudeSettingsLaunch(inherited, request.accountHomePath)
   const discoveryArgs = request.discovery
     ? await waitForPromiseWithSignal(
         request.discovery({ command, prefixArgs, cwd: request.cwd ?? process.cwd(), env }),
@@ -65,7 +65,7 @@ export async function runClaudeListing(
     return (deps.runListing ?? runAgentModelCatalogListing)(
       {
         command,
-        args: [...prefixArgs, ...args],
+        args: [...prefixArgs, ...(settingsFile ? ['--settings', settingsFile] : []), ...args],
         stdin: request.stdin,
         ...(request.cwd ? { cwd: request.cwd } : {})
       },

@@ -1309,6 +1309,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'hostedReview.createStacked': HostedReviewCreate,
   'hostedReview.forBranch': HostedReviewForBranch,
   'hostedReview.getCreationEligibility': HostedReviewCreationEligibility,
+  'intranet.claudeConfiguration': null,
   'intranet.codexModels': null,
   'intranet.sshClaudeCancel': SshClaudeDiagnosticHandle,
   'intranet.sshClaudeCurrent': null,

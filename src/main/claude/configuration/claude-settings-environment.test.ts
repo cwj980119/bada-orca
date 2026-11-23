@@ -2,7 +2,7 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, expect, it } from 'vitest'
-import { withClaudeSettingsEnvironment } from './claude-settings-environment'
+import { claudeSettingsLaunch, withClaudeSettingsEnvironment } from './claude-settings-environment'
 
 const directories: string[] = []
 afterEach(async () => {
@@ -17,7 +17,7 @@ async function settings(value: unknown): Promise<string> {
   return directory
 }
 
-it('loads the selected Claude settings env into the child without overwriting explicit launch values', async () => {
+it('references the original settings file and uses its environment over stale launch values', async () => {
   const directory = await settings({
     env: {
       ANTHROPIC_BASE_URL: 'https://gateway.company.internal',
@@ -34,7 +34,10 @@ it('loads the selected Claude settings env into the child without overwriting ex
   expect(
     (await withClaudeSettingsEnvironment({ ANTHROPIC_MODEL: 'explicit-model' }, directory))
       .ANTHROPIC_MODEL
-  ).toBe('explicit-model')
+  ).toBe('company-model')
+  expect((await claudeSettingsLaunch({}, directory)).settingsFile).toBe(
+    join(directory, 'settings.json')
+  )
 })
 
 it('uses only the selected configuration home and rereads changed settings for each launch', async () => {

@@ -3,17 +3,16 @@ import { Plug } from 'lucide-react'
 import { INTRANET_MCP_SETTINGS_TARGET_ID } from '../navigation/settings-navigation-types'
 import { scrollSubsectionIntoView } from '../navigation/settings-navigation-foundations'
 import { Button } from '../../ui/button'
-import { Input } from '../../ui/input'
 import { Label } from '../../ui/label'
 import { Textarea } from '../../ui/textarea'
 import { OpenCodeModelSettings } from './OpenCodeModelSettings'
 import { CodexModelSettings } from './CodexModelSettings'
 import { IntranetResourceSettings } from './IntranetResourceSettings'
 import { SettingsGroup } from '../section-layout/SettingsGroup'
-import { SettingsRow } from '../form-controls/SettingsFormControls'
 import { IntranetSsoSettings } from './sso/IntranetSsoSettings'
 import { ssoSettingError } from './sso/sso-setting-errors'
 import { SshClaudeDiagnostic } from './SshClaudeDiagnostic'
+import { LocalClaudeConfiguration } from './LocalClaudeConfiguration'
 import { useTranslate } from '@/i18n/use-translate'
 import {
   IntranetSettingsSchema,
@@ -36,14 +35,6 @@ export function IntranetSettingsPane({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
-  const edit = (
-    agent: 'opencode' | 'claude',
-    key: 'baseUrl' | 'model' | 'apiKeyEnv',
-    value: string
-  ): void => {
-    setDraft((current) => ({ ...current, [agent]: { ...current[agent], [key]: value } }))
-    setSaved(false)
-  }
   const submit = async (): Promise<void> => {
     setSaved(false)
     setError('')
@@ -163,38 +154,7 @@ export function IntranetSettingsPane({
           setSaved(false)
         }}
       />
-      <SettingsGroup
-        title="Claude Code"
-        description={t(
-          'intranet.claudeDescription',
-          'Use an Anthropic-compatible internal gateway. Leave empty to use the existing CLI configuration and credentials.'
-        )}
-      >
-        <SettingsRow
-          label={t('intranet.baseUrl', 'Model server URL')}
-          control={
-            <Input
-              aria-label={t('intranet.claudeServerUrl', 'Claude Code server URL')}
-              value={draft.claude.baseUrl}
-              onChange={(event) => edit('claude', 'baseUrl', event.target.value)}
-              placeholder="http://llm.company.internal:8000"
-              className="w-80 max-w-full"
-            />
-          }
-        />
-        <SettingsRow
-          label={t('intranet.model', 'Model ID')}
-          control={
-            <Input
-              aria-label={t('intranet.claudeModelId', 'Claude Code model ID')}
-              value={draft.claude.model}
-              onChange={(event) => edit('claude', 'model', event.target.value)}
-              placeholder="model-id"
-              className="w-80 max-w-full"
-            />
-          }
-        />
-      </SettingsGroup>
+      <LocalClaudeConfiguration />
       <SshClaudeDiagnostic />
       <CodexModelSettings
         value={draft.cliModels?.codex ?? { model: '', models: [] }}
