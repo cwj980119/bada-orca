@@ -49,8 +49,10 @@ export const SSH_CLAUDE_DIAGNOSTIC_METHODS = [
         username: '',
         port: 22
       }
-      current = new SshClaudeDiagnosticJob(input, sshDiagnosticTransport(target))
-      void current.run()
+      const { password, ...diagnosticInput } = input
+      const transport = sshDiagnosticTransport(target, password)
+      current = new SshClaudeDiagnosticJob(diagnosticInput, transport.execute)
+      void current.run().finally(transport.close)
       return current.snapshot()
     }
   }),

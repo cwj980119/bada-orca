@@ -1,6 +1,7 @@
 import { defineFixture } from '../../../component-fixtures/component-fixture'
 import { SshClaudeDiagnostic } from './SshClaudeDiagnostic'
 import { SshClaudeDiagnosticResultView } from './SshClaudeDiagnosticResultView'
+import { SshClaudeConnectionFields } from './SshClaudeConnectionFields'
 import type { SshClaudeDiagnosticResult } from '../../../../../shared/intranet/ssh-claude-diagnostic'
 
 const passed: SshClaudeDiagnosticResult = {
@@ -31,6 +32,21 @@ export const completed = defineFixture({
   render: () => (
     <div className="settings-view-shell bg-background p-8">
       <SshClaudeDiagnosticResultView result={passed} />
+    </div>
+  )
+})
+
+export const passwordAuthentication = defineFixture({
+  width: 720,
+  render: () => (
+    <div className="settings-view-shell space-y-4 bg-background p-8">
+      <SshClaudeConnectionFields
+        destination="user@company-linux"
+        password="fixture-example"
+        disabled={false}
+        onDestinationChange={() => {}}
+        onPasswordChange={() => {}}
+      />
     </div>
   )
 })

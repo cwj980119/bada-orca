@@ -11,10 +11,12 @@ import {
   type SshClaudeDiagnosticResult
 } from '../../../../../shared/intranet/ssh-claude-diagnostic'
 import { SshClaudeDiagnosticResultView } from './SshClaudeDiagnosticResultView'
+import { SshClaudeConnectionFields } from './SshClaudeConnectionFields'
 
 export function SshClaudeDiagnostic(): React.JSX.Element {
   const t = useTranslate()
   const [destination, setDestination] = useState('')
+  const [password, setPassword] = useState('')
   const [directory, setDirectory] = useState('')
   const [executable, setExecutable] = useState('claude')
   const [timeoutSeconds, setTimeoutSeconds] = useState(60)
@@ -31,7 +33,8 @@ export function SshClaudeDiagnostic(): React.JSX.Element {
     destination,
     directory,
     executable,
-    timeoutSeconds
+    timeoutSeconds,
+    password: password || undefined
   })
 
   useEffect(() => {
@@ -118,6 +121,7 @@ export function SshClaudeDiagnostic(): React.JSX.Element {
     setStarting(true)
     setUnavailable(false)
     setCopyState('idle')
+    setPassword('')
     try {
       const next = await callRuntimeRpc<SshClaudeDiagnosticResult>(
         { kind: 'local' },
@@ -184,22 +188,16 @@ export function SshClaudeDiagnostic(): React.JSX.Element {
         <p className="text-settings-detail text-muted-foreground">
           {t(
             'intranet.sshClaude.requirements',
-            'Uses this PC’s OpenSSH configuration and existing keys or SSH agent. Password prompts are not shown. The test sends two small model requests with tools disabled; Claude saves its own conversation history. No project files are edited or Orca files uploaded.'
+            'Uses this PC’s OpenSSH configuration. Enter an optional SSH password below. The test sends two small model requests with tools disabled; Claude saves its own conversation history. No project files are edited or Orca files uploaded.'
           )}
         </p>
-        <div className="space-y-2">
-          <Label htmlFor="ssh-claude-destination">
-            {t('intranet.sshClaude.destination', 'SSH alias or user@host')}
-          </Label>
-          <Input
-            id="ssh-claude-destination"
-            value={destination}
-            disabled={busy}
-            placeholder={t('intranet.sshClaude.destinationPlaceholder', 'company-linux')}
-            autoComplete="off"
-            onChange={(event) => setDestination(event.target.value)}
-          />
-        </div>
+        <SshClaudeConnectionFields
+          destination={destination}
+          password={password}
+          disabled={busy}
+          onDestinationChange={setDestination}
+          onPasswordChange={setPassword}
+        />
         <div className="space-y-2">
           <Label htmlFor="ssh-claude-directory">
             {t('intranet.sshClaude.directory', 'Linux project directory (absolute path)')}

@@ -9,7 +9,7 @@ export function sshClaudeProblemCopy(problem: SshClaudeDiagnosticProblem, t: Tra
     ),
     authentication: t(
       'intranet.sshClaude.authentication',
-      'SSH authentication failed. This test uses your OpenSSH configuration and existing keys or agent; it cannot show a password prompt.'
+      'SSH authentication failed. Check the SSH username and password, or leave the password blank to use existing keys or SSO. Additional OTP prompts and jump-host passwords are not supported.'
     ),
     host_key: t(
       'intranet.sshClaude.hostKey',

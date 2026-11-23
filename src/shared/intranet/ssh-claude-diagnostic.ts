@@ -17,7 +17,8 @@ export const SshClaudeDiagnosticStart = z
       .regex(/^[A-Za-z0-9][A-Za-z0-9_.@:[\]-]*$/),
     directory: remoteWord.refine((value) => value.startsWith('/')),
     executable: remoteWord.default('claude'),
-    timeoutSeconds: z.number().int().min(20).max(120).default(60)
+    timeoutSeconds: z.number().int().min(20).max(120).default(60),
+    password: z.string().min(1).max(1024).optional()
   })
   .strict()
 export const SshClaudeDiagnosticHandle = z.object({ id: z.string().uuid() }).strict()
