@@ -34,7 +34,6 @@ import {
 } from '../../shared/remote-runtime/serve-supervisor/orcad-local-serve-selection'
 import { findBundledWebClientRoot } from '../../shared/web-client/bundled-web-client-root'
 import { resolveLocalServeRuntime, serveWithOrcad } from './serve/startup/serve-orcad-launch'
-import { findAppSpeechRecognizerDir } from './app-launch/serve-speech-recognizer'
 import {
   serveOptionArgs,
   type ServeOrcaAppArgs
@@ -210,7 +209,6 @@ async function serveWithSelectedRuntime(
       userDataPath,
       stripElectronRunAsNode(process.env),
       findBundledWebClientRoot(resolveAppRoot()),
-      findAppSpeechRecognizerDir(resolveAppRoot()),
       servedAppImageForBrowser(executable)
     )
   }

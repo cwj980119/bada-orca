@@ -19,7 +19,6 @@ import type { CreateMainWindowOptions } from './main-window-contracts'
 import type { MainWindowFocusLifecycle } from './main-window-focus-lifecycle'
 import { sendResolvedWindowShortcutAction } from './main-window-shortcut-actions'
 import { isMacAppPasteInput } from '../editing/mac-app-paste-input'
-import { dictationShortcutMode } from '../../../shared/speech/dictation/dictation-shortcut-mode'
 import {
   textInputOwnsComposition,
   type TextShortcutInput
@@ -69,35 +68,6 @@ export function installMainWindowShortcutRouting(args: {
       windowShortcutActionCapturesTerminal(action)
         ? getWindowShortcutActionId(action)
         : null
-
-    // Hold and Auto need renderer keyup; consume only single-keydown toggles in main.
-    if (action.type === 'dictationKeyDown') {
-      const voiceSettings = store?.getSettings().voice
-      // No model still forwards: the renderer's startDictation shows the setup toast.
-      if (!voiceSettings?.enabled || textInputOwnsComposition(options.input)) {
-        return false
-      }
-      const dictationMode = dictationShortcutMode(voiceSettings)
-      // A double tap has no release to hold, so Auto toggles on it.
-      const toggles =
-        dictationMode === 'toggle' ||
-        (dictationMode === 'auto' && options.input.doubleTapModifier !== undefined)
-      if (!toggles) {
-        return false
-      }
-      if (isAutoRepeat) {
-        event.preventDefault()
-        return true
-      }
-      event.preventDefault()
-      if (capturedTerminalActionId) {
-        mainWindow.webContents.send('ui:terminalShortcutCaptured', {
-          actionId: capturedTerminalActionId
-        })
-      }
-      mainWindow.webContents.send('ui:dictationKeyDown')
-      return true
-    }
 
     if (action.type === 'toggleQuickCommandsMenu' && isAutoRepeat) {
       event.preventDefault()

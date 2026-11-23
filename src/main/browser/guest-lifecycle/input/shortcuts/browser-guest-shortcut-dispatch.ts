@@ -47,7 +47,6 @@ export function forwardGuestShortcutInput(
     browserTabId,
     resolveRenderer,
     isLocalRenderer,
-    shouldForwardDictationShortcut,
     isMobileEmulatorEnabled,
     getKeybindings,
     resolveWorktreeId,
@@ -56,11 +55,6 @@ export function forwardGuestShortcutInput(
   } = ctx
   const page = ctx.browserPage !== false
   const keybindings = getKeybindings?.()
-  // An IME composition keeps the key, as in the main window.
-  const forwardsDictation =
-    action?.type === 'dictationKeyDown' &&
-    !textInputOwnsComposition(input) &&
-    shouldForwardDictationShortcut?.() === true
   // Why: Ctrl+Alt can be AltGr on Windows/Linux; leave those chords with the page.
   const mayBeAltGraph =
     process.platform !== 'darwin' && hasModifier(input, 'control') && hasModifier(input, 'alt')
@@ -90,7 +84,6 @@ export function forwardGuestShortcutInput(
   }
   if (input.isAutoRepeat) {
     if (
-      forwardsDictation ||
       matchesPlugins ||
       // Why: Orca claims a held tab chord on every repeat but acts once, so repeats never reach the page.
       matchesGuestTabShortcut(
@@ -232,11 +225,6 @@ export function forwardGuestShortcutInput(
     } else {
       renderer.send('ui:jumpToTabIndex', action.index)
     }
-  } else if (action?.type === 'dictationKeyDown') {
-    if (!forwardsDictation) {
-      return false
-    }
-    renderer.send('ui:dictationKeyDown')
   } else if (
     matchesPlugins ||
     matchesGuestTabShortcut(

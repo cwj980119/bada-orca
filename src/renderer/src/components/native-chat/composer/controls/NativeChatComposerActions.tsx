@@ -22,7 +22,6 @@ import { NativeChatComposerPermissionPicker } from '../../session/options/contro
 import { NativeChatComposerGoalChip } from './NativeChatComposerGoalChip'
 import { NativeChatComposerPrimaryButton } from './NativeChatComposerPrimaryButton'
 import { NativeChatAttachButton } from './NativeChatAttachButton'
-import { NativeChatDictationButton } from './NativeChatDictationButton'
 import { NativeChatContextUsageRing } from '../../usage/NativeChatContextUsageRing'
 import type { NativeChatContextUsageSummary } from '../../../../../../shared/native-chat/native-chat-context-usage-summary'
 import type { NativeChatOptionPickerRequest } from '../../session/options/controls/native-chat-option-picker-request'
@@ -65,7 +64,7 @@ export type NativeChatComposerActionsProps = {
   contextUsage?: NativeChatContextUsageSummary | null
   /** The chat's agent, whose permission modes the picker describes. */
   agent?: string
-  /** A launch prompt: Attach and dictation are its only controls; launching is the panel's. */
+  /** A launch prompt only attaches files; launching is the panel's. */
   launchPrompt?: boolean
 }
 
@@ -73,7 +72,6 @@ export type NativeChatComposerActionsProps = {
 export const NativeChatComposerActions = memo(function NativeChatComposerActions({
   editSession,
   attachDisabled,
-  dictationDisabled,
   sendDisabled,
   sendBlockedReason,
   draftNotSaved,
@@ -81,12 +79,7 @@ export const NativeChatComposerActions = memo(function NativeChatComposerActions
   hasDraft = false,
   alternateSend,
   isStopping = false,
-  isDictating,
-  isDictationHoldMode,
   onAttach,
-  onDictationToggle,
-  onDictationHoldStart,
-  onDictationHoldEnd,
   onSend,
   steerPreview = null,
   onSteerPreview,
@@ -175,22 +168,9 @@ export const NativeChatComposerActions = memo(function NativeChatComposerActions
   )
 
   const attach = <NativeChatAttachButton disabled={attachDisabled} onAttach={onAttach} />
-  const dictation = (
-    <NativeChatDictationButton
-      disabled={dictationDisabled}
-      isDictating={isDictating}
-      isHoldMode={isDictationHoldMode}
-      onToggle={onDictationToggle}
-      onHoldStart={onDictationHoldStart}
-      onHoldEnd={onDictationHoldEnd}
-    />
-  )
   if (launchPrompt) {
     return (
-      <div className="flex w-full items-center justify-between text-muted-foreground">
-        {attach}
-        {dictation}
-      </div>
+      <div className="flex w-full items-center justify-between text-muted-foreground">{attach}</div>
     )
   }
 
@@ -260,7 +240,6 @@ export const NativeChatComposerActions = memo(function NativeChatComposerActions
           }
         ]
       : []),
-    { id: 'dictation', priority: 2, content: dictation },
     ...(draftNotSaved
       ? [{ id: 'draft', priority: 1, content: <NativeChatComposerDraftNotSavedIcon shown /> }]
       : []),

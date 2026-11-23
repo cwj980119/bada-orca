@@ -18,6 +18,7 @@ export function enforceIntranetSettings(settings: GlobalSettings): GlobalSetting
   settings.geminiCliOAuthEnabled = false
   if (settings.voice) {
     settings.voice.enabled = false
+    settings.voice.sttModel = ''
   }
   if (settings.telemetry && settings.telemetry.optedIn !== false) {
     settings.telemetry = { ...settings.telemetry, optedIn: false }

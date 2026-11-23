@@ -6,7 +6,17 @@ const roots = ['src/main', 'src/shared', 'src/renderer/src', 'src/cli', 'src/pre
 const retiredPath =
   /src\/main\/(?:telemetry\/|updater\/|google\/|linear\/|composio\/|connector-cloud\/|artifacts\/|host-oauth\/|bots\/tool-(?:oauth|relay)\/|skills\/cloud\/|runtime\/(?:push\/|mobile-cloud-relay\/)|observability\/diagnostic-(?:upload|bundle-upload)|runtime\/rpc\/transports\/relay-transport|browser\/extensions\/web-store\/browser-extension-webstore-(?:download|updater)|agent-cli-update\/agent-cli-latest-release|speech\/(?:openai-transcription-client|node-speech-download-request))/
 
-const forbiddenPackages = new Set(['posthog-node', 'electron-updater', '@linear/sdk'])
+const forbiddenPackages = new Set([
+  'posthog-node',
+  'electron-updater',
+  '@linear/sdk',
+  'transcribe-cpp',
+  '@transcribe-cpp/darwin-arm64-metal',
+  '@transcribe-cpp/darwin-x64-cpu',
+  '@transcribe-cpp/linux-arm64-cpu-vulkan',
+  '@transcribe-cpp/linux-x64-cpu-vulkan',
+  '@transcribe-cpp/win32-x64-cpu-vulkan'
+])
 const publicEndpoint =
   /^https?:\/\/(?:us\.i\.posthog\.com|backend\.composio\.dev|(?:connector|push|share)\.(?:orca|onorca)\.dev|api\.bitbucket\.org|huggingface\.co|(?:unofficial-builds\.)?nodejs\.org\/(?:dist|download)|(?:www\.)?google\.com\/(?:s2\/favicons|search)|duckduckgo\.com\/\?q|www\.bing\.com\/search|kagi\.com\/search|orca\.dev\/(?:plugins\/(?:stats|kill-list)|whats-new)|downloads\.claude\.ai|dl\.google\.com\/agy-extensions|(?:oauth2|gmail|docs|sheets|people|cloudcode-pa)\.googleapis\.com|api\.anthropic\.com\/api\/oauth|chatgpt\.com\/backend-api)/i
 const excluded =
@@ -92,7 +102,7 @@ for (const absolute of roots.flatMap(files)) {
 
 const manifest = JSON.parse(readFileSync('package.json', 'utf8'))
 for (const name of forbiddenPackages) {
-  if (name in manifest.dependencies) {
+  if (name in manifest.dependencies || name in (manifest.optionalDependencies ?? {})) {
     failures.push(`package.json: removed runtime dependency ${name}`)
   }
 }

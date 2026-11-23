@@ -44,7 +44,6 @@ import {
 import { prepareWorktreeRemovalsForStore } from '../workspaces/removal/worktree-removal-records-load'
 import { worktreeRemovalLifetime } from '../workspaces/removal/worktree-removal-lifetime'
 import { runAfterFirstWindowShown } from './main-window/first-window-deferral'
-import { startSpeechModelWarmup } from '../speech/speech-model-warmup'
 import { logStartupMilestone } from './diagnostics/startup-diagnostics'
 import { refreshInstalledOpenCodeStatusPlugins } from '../opencode/status-hooks/opencode-status-plugin-startup-refresh'
 import { pruneDesktopOrcadArtifactCache } from '../orcad/artifact-slots/orcad-artifact-cache-retention'
@@ -139,10 +138,6 @@ export async function initializeReadyRuntimeServices(): Promise<void> {
   // The startup pass ran before browser sessions and any window existed, so `browser-cookies` paused.
   runAfterFirstWindowShown(() => {
     void runGatedWslMoveDesktopRewritePass({ userDataPath: app.getPath('userData') })
-  }, WORKTREE_TRASH_SWEEP_FALLBACK_MS)
-  // Load the dictation model after first paint; coming back to Orca re-warms one the idle timer unloaded.
-  runAfterFirstWindowShown(() => {
-    app.on('browser-window-focus', startSpeechModelWarmup(store))
   }, WORKTREE_TRASH_SWEEP_FALLBACK_MS)
   runAfterFirstWindowShown(() => {
     startClaudeCodeThemeSync({

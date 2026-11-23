@@ -5,7 +5,6 @@ import { AgentDefaultSurfaceSection } from '../agents/surfaces/AgentDefaultSurfa
 import { ComputerUsePane } from '../computer-use/ComputerUsePane'
 import { LinearAgentSkillPane } from '../skills/linear/LinearAgentSkillPane'
 import { OrchestrationPane } from '../orchestration/OrchestrationPane'
-import { VoicePane } from '../voice/VoicePane'
 import { SettingsSection } from '../section-layout/SettingsSection'
 import { SettingsHostScopeUnavailableNotice } from '../host-scope/SettingsHostScopePicker'
 import { LOCAL_SETTINGS_HOST_SCOPE } from '../host-scope/settings-host-scope'
@@ -155,36 +154,16 @@ export function renderDesktopCapabilitySettingsSections(
 ): React.JSX.Element | null {
   const { model, navigation, view } = context
   return model.showDesktopOnlySettings ? (
-    <>
-      <SettingsSection
-        id="computer-use"
-        title={t('auto.components.settings.Settings.3f3e11cb5d', 'Computer use')}
-        description={t(
-          'auto.components.settings.Settings.7118953f14',
-          'Enable agents to control any app on your computer.'
-        )}
-        searchEntries={navigation.getSectionSearchEntries('computer-use')}
-      >
-        {view.isSectionMounted('computer-use') ? <ComputerUsePane /> : null}
-      </SettingsSection>
-
-      <SettingsSection
-        id="voice"
-        title={t('auto.components.settings.Settings.5063bb47a5', 'Voice')}
-        description={t(
-          'components.settings.voice.pageDescription',
-          'Talk instead of typing in any pane.'
-        )}
-        searchEntries={navigation.getSectionSearchEntries('voice')}
-      >
-        {view.isSectionMounted('voice') ? (
-          <VoicePane
-            settings={model.settings}
-            updateSettings={model.updateSettings}
-            writeSourceControlAiSettings={context.interactions.writeSourceControlAiSettingsOrThrow}
-          />
-        ) : null}
-      </SettingsSection>
-    </>
+    <SettingsSection
+      id="computer-use"
+      title={t('auto.components.settings.Settings.3f3e11cb5d', 'Computer use')}
+      description={t(
+        'auto.components.settings.Settings.7118953f14',
+        'Enable agents to control any app on your computer.'
+      )}
+      searchEntries={navigation.getSectionSearchEntries('computer-use')}
+    >
+      {view.isSectionMounted('computer-use') ? <ComputerUsePane /> : null}
+    </SettingsSection>
   ) : null
 }

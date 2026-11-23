@@ -15,7 +15,6 @@ const {
 } = require('./scripts/native-build/windows/windows-pe-machine.cjs')
 const { adoptPackagedNativeBuildEntries } = require('./packaged-native-build-entries.cjs')
 const { runtimePackageExcludeFilter } = require('./packaged-windows-only-runtime-files.cjs')
-const { missingTranscribeCppPackages } = require('./packaged-transcribe-cpp.cjs')
 const {
   NATIVE_BUILD_PACKAGES,
   TRANSIENT_NATIVE_BUILD_ENTRY_FILTER
@@ -532,8 +531,6 @@ function assertPackagedNativeVariantsInstalled(electronPlatformName, electronArc
   const nodeModulesDir = join(projectDir, 'node_modules')
   const isInstalled = (name) => existsSync(join(nodeModulesDir, name, 'package.json'))
   const missing = []
-
-  missing.push(...missingTranscribeCppPackages(readPackage, electronPlatformName, architecture))
 
   // Why prefix, not equality: linux variants carry a libc suffix (watcher-linux-x64-glibc),
   // mirroring what prunePackagedParcelWatcher keeps.

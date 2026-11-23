@@ -25,7 +25,6 @@ import {
 import { readLegacySidekickFlag } from '../../applying-settings/onboarding-normalization'
 import { normalizeMachineName } from '../../../../shared/remote-runtime/host-metadata/machine-name'
 import { normalizeWorkspaceCleanupRules } from '../../../../shared/workspace-cleanup/workspace-cleanup-policy'
-import { replaceRetiredSpeechModelId } from '../../../speech/model-catalog'
 import type { PersistedState } from '../../../../shared/orca-profiles/persisted-state-types'
 import type { VoiceSettings } from '../../../../shared/speech/speech-types'
 import { dictationShortcutModeSettings } from '../../../../shared/speech/dictation/dictation-shortcut-mode'
@@ -203,7 +202,7 @@ export function normalizeLoadedGlobalSettings(
       migratedSourceControlAi,
       parsed.settings?.commitMessageAi ?? defaults.settings.commitMessageAi
     ),
-    voice: { ...voice, sttModel: replaceRetiredSpeechModelId(voice.sttModel) },
+    voice: { ...voice, enabled: false, sttModel: '' },
     voiceDictationModeDefaultedToAuto: true
   }
 }

@@ -491,15 +491,7 @@
 2 src/main/runtime/terminal/launch/claude-agent-teams-shim-env.ts
 1 src/main/runtime/workspaces/persisted-surfaces/crew-operations.ts
 1 src/main/server/serve-pairing-output.ts
-2 src/main/speech/model-cache-path.ts
-7 src/main/speech/model-manager.ts
 10 src/main/speech/openai-api-key-store.ts
-1 src/main/speech/speech-model-download-cleanup.ts
-1 src/main/speech/speech-model-download-transport.ts
-1 src/main/speech/speech-model-files.ts
-2 src/main/speech/speech-model-http-download.ts
-1 src/main/speech/speech-vad-model.ts
-2 src/main/speech/stt-gpu-failure-marker.ts
 2 src/main/sqlite/harden-database-files.ts
 1 src/main/sqlite/row-cache/keyed-json-row-cache.ts
 2 src/main/sqlite/row-cache/legacy-json-source.ts
@@ -612,7 +604,6 @@
 3 src/shared/shell/launch/cli-runtime-pairing-inputs.ts
 5 src/shared/shell/launch/startup-command-staging.ts
 3 src/shared/source-scan/source-tree-scan.ts
-2 src/shared/speech/native-recognizer/speech-recognizer-package.ts
 1 src/shared/terminal/pty/native-process/pty-process-ceiling-state.ts
 2 src/shared/web-client/bundled-web-client-manifest.ts
 3 src/shared/web-client/bundled-web-client-root.ts

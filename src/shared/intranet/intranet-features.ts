@@ -49,6 +49,7 @@ export function isIntranetSlashCommand(name: string): boolean {
 export function isIntranetRpcMethod(name: string): boolean {
   return (
     ![
+      'speech.',
       'pairing.',
       'mobileRelay.',
       'mobileWeb.',

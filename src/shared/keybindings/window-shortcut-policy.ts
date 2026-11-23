@@ -42,7 +42,6 @@ export type WindowShortcutAction =
   | { type: 'jumpToWorktreeIndex'; index: number }
   | { type: 'jumpToTabIndex'; index: number }
   | { type: 'worktreeHistoryNavigate'; direction: 'back' | 'forward' }
-  | { type: 'dictationKeyDown' }
 
 function platformPrimaryModifier(
   input: Pick<WindowShortcutInput, 'meta' | 'control'>,
@@ -217,10 +216,6 @@ export function resolveWindowShortcutAction(
     return { type: 'openWorkspaceBoard' }
   }
 
-  if (keybindingMatchesAction('voice.dictation', input, platform, keybindings, options)) {
-    return { type: 'dictationKeyDown' }
-  }
-
   if (keybindingMatchesAction('view.tasks', input, platform, keybindings, options)) {
     return { type: 'openTasks' }
   }
@@ -300,8 +295,6 @@ export function getWindowShortcutActionId(action: WindowShortcutAction): Keybind
       return 'tab.previousRecent'
     case 'worktreeHistoryNavigate':
       return action.direction === 'back' ? 'worktree.history.back' : 'worktree.history.forward'
-    case 'dictationKeyDown':
-      return 'voice.dictation'
     case 'jumpToWorktreeIndex':
       return 'workspace.selectByIndex'
     case 'jumpToTabIndex':
