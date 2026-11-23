@@ -198,7 +198,7 @@ export function BotSettingsRoot({
   const state = bot.paused
     ? t('bots.settingsPage.paused', 'Paused')
     : t('bots.settingsPage.active', 'Active')
-  const model = bot.launch?.model ?? t('intranet.bots.defaultModel', 'Company model default')
+  const model = bot.launch?.model ?? t('intranet.bots.defaultModel', 'Configured default')
   const picture = useBotPictureSetting(bot, update)
   return (
     <>

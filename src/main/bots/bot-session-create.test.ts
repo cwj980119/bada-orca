@@ -30,6 +30,17 @@ afterEach(async () => {
   vi.useRealTimers()
 })
 
+it('keeps CLI configuration in foreground and background bots instead of a remembered chat model', async () => {
+  const bot = makeTestBot({ agent: 'claude', permissionMode: undefined })
+  const runtime = runtimeFor(bot, {})
+  const foreground = await startBotSession(runtime, bot)
+  const background = await startBotSession(runtime, bot, { background: true })
+  expect(rig.store.getRecord(foreground)?.options?.model).toBeUndefined()
+  expect(rig.store.getRecord(foreground)?.options?.effort).toBeUndefined()
+  expect(rig.store.getRecord(background)?.options?.model).toBeUndefined()
+  expect(rig.store.getRecord(background)?.options?.effort).toBeUndefined()
+})
+
 it('uses the current chat default for each new session without changing existing sessions', async () => {
   const bot = makeTestBot({ permissionMode: undefined })
   const settings: NewChatPermissionSettings = { agentPermissionDefault: 'full-access' }

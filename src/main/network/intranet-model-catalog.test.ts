@@ -27,8 +27,53 @@ it('lists registered Codex models and never probes the CLI account catalog', asy
   ).toEqual([{ id: 'company-coder', isDefault: true }])
   env = {}
   expect((await discovery.probe(home)).models).toEqual([])
-  expect(probe).not.toHaveBeenCalled()
 })
+
+it.each(['claude', 'opencode', 'opencode2'])(
+  'uses the installed %s catalog unless company models are configured',
+  async (agent) => {
+    let env: Record<string, string> = {}
+    const discovery = intranetModelDiscovery(
+      agent,
+      {
+        deps: { resolveAgentLaunchEnv: () => env }
+      },
+      {
+        kind: 'probe',
+        listingNamesConfiguredModel: true,
+        probe: async (_home, options) => ({
+          origin: 'probe',
+          complete: true,
+          configured: { model: options?.cwd === '/project' ? 'company/cli-default' : undefined },
+          models: [{ id: 'company/cli-default', label: 'CLI model', isDefault: true, efforts: [] }]
+        })
+      }
+    )
+    if (discovery.kind !== 'probe') {
+      throw new Error('Expected installed CLI discovery')
+    }
+    const home = { variable: 'CLAUDE_CONFIG_DIR', path: '/company/cli' }
+    const result = await discovery.probe(home, { cwd: '/project' })
+    expect(result.configured).toEqual({ model: 'company/cli-default' })
+    expect(result.models.map(({ id }) => id)).toEqual(['company/cli-default'])
+    env = intranetAgentEnvironment(
+      agent,
+      {
+        ...defaultIntranetSettings(),
+        claude: { baseUrl: '', model: 'company-override' },
+        opencode: {
+          ...defaultIntranetSettings().opencode,
+          model: 'company/override',
+          models: [{ id: 'company/override', name: '', purpose: '' }]
+        }
+      },
+      {}
+    )
+    expect((await discovery.probe(home)).models.map(({ id }) => id)).toEqual([
+      agent === 'claude' ? 'company-override' : 'company/override'
+    ])
+  }
+)
 
 it('offers every registered model with its purpose and default selection', async () => {
   const env = intranetAgentEnvironment(

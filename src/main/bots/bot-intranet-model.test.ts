@@ -7,6 +7,25 @@ import { botSessionInstructions } from './bot-session-instructions'
 import { folderWorkspaceKey } from '../../shared/workspace/identity/workspace-scope'
 
 describe('local company bots', () => {
+  it.each(['claude', 'opencode', 'opencode2'] as const)(
+    'lets %s choose its own configured model when no company model is registered',
+    (agent) => {
+      const settings = getDefaultSettings('/fixture')
+      settings.nativeChatSessionOptions = { [agent]: { model: 'remembered-chat-model' } }
+      expect(botStartOptions(() => settings, { agent }, false)).toEqual({})
+      expect(botStartOptions(() => settings, { agent }, true)).toEqual({})
+      expect(
+        botStartOptions(
+          () => settings,
+          {
+            agent,
+            launch: { model: 'company/existing-cli-model' }
+          },
+          false
+        )
+      ).toEqual({ model: 'company/existing-cli-model' })
+    }
+  )
   it('runs Codex with registered company models and rejects an unregistered override', () => {
     const settings = getDefaultSettings('/fixture')
     settings.intranet = {
@@ -25,7 +44,7 @@ describe('local company bots', () => {
       )
     ).toThrow()
   })
-  it('uses registered company models instead of remembered chat defaults, and refuses missing or removed registrations', () => {
+  it('uses registered company models instead of remembered chat defaults, and refuses removed registrations', () => {
     const settings = getDefaultSettings('/fixture')
     settings.intranet = {
       ...defaultIntranetSettings(),
@@ -63,9 +82,6 @@ describe('local company bots', () => {
         { agent: 'opencode', launch: { model: 'public/model' } },
         false
       )
-    ).toThrow()
-    expect(() =>
-      botStartOptions(() => getDefaultSettings('/fixture'), { agent: 'claude' }, false)
     ).toThrow()
     expect(() => botStartOptions(() => settings, { agent: 'codex' }, false)).toThrow()
   })
@@ -118,4 +134,26 @@ describe('local company bots', () => {
       ).rejects.toThrow()
     }
   })
+
+  it.each(['claude', 'opencode', 'opencode2'] as const)(
+    'prepares resumed %s bot instructions without requiring a model ID in CLI-default mode',
+    async (agent) => {
+      await expect(
+        botSessionInstructions(
+          { launched: () => {}, linkedSkillsLaunched: () => {} },
+          [{ id: 'bot-cli', name: 'CLI bot', agent, folderWorkspaceId: 'home' }],
+          {
+            sessionId: 'resumed-session',
+            provider: agent,
+            location: { workspaceId: folderWorkspaceKey('home') },
+            providerHandleChain: ['existing']
+          },
+          '/fixture',
+          null,
+          { readText: async () => null },
+          defaultIntranetSettings()
+        )
+      ).resolves.toEqual(expect.any(String))
+    }
+  )
 })

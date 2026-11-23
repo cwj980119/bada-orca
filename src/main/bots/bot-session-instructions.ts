@@ -67,12 +67,12 @@ export async function botSessionInstructions(
 ): Promise<string | null> {
   const owner = botOfHomeWorkspace(bots, record.location.workspaceId)
   if (owner) {
-    if (!record.options?.model) {
+    const configured = intranetBotModel(record.provider, record.options?.model, intranet)
+    if (!record.options?.model && configured) {
       throw new Error(
         '이 대화에는 사내 모델이 지정되어 있지 않습니다. Bot 설정에서 모델을 선택하고 새 홈 채팅을 시작해 주세요.'
       )
     }
-    intranetBotModel(record.provider, record.options.model, intranet)
   }
   let neverLinked = false
   const preamble = await botSessionPreamble(

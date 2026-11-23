@@ -11,7 +11,7 @@ export function IntranetBotConnectionNotice(): React.JSX.Element {
       <p className="text-settings-detail text-muted-foreground">
         {t(
           'intranet.bots.connectionHelp',
-          'Bots use models registered in Intranet settings. Register a model before chatting, then select it under Agent and model. Company MCP servers and skill/document folders are applied to new sessions. Install the agent CLI on this computer through your company’s distribution process.'
+          'Claude Code and OpenCode can use their existing CLI settings and authentication without registering a model here. Registered company models override CLI defaults. Company MCP servers and skill/document folders apply to new sessions.'
         )}
       </p>
       <Button

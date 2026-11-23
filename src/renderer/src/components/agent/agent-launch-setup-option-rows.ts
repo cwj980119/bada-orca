@@ -235,7 +235,7 @@ export function agentLaunchSetupCatalogState(
     settled && !hasModels && isIntranetAgent(entry.agent)
       ? t(
           'intranet.bots.modelDefault',
-          'Uses the registered company model. Configure it in Intranet settings before starting a conversation.'
+          'Claude Code and OpenCode use existing CLI settings when no company model is registered. You can start chatting without selecting a model.'
         )
       : unsupported
         ? t(

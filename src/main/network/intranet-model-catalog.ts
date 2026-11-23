@@ -3,6 +3,7 @@ import { parse as parseJsonc } from 'jsonc-parser'
 import { z } from 'zod'
 import type { AgentModelCatalogSuccess } from '../native-chat/agent-model-catalog/agent-model-catalog-entry'
 import type { StructuredAgentModelCatalogContext } from '../runtime/agent-session/installation/structured-agent-runtime-registration-types'
+import { supportsIntranetCliDefaults } from '../../shared/intranet/intranet-features'
 
 type IntranetCatalogContext = {
   deps: Pick<StructuredAgentModelCatalogContext['deps'], 'resolveAgentLaunchEnv'>
@@ -68,10 +69,13 @@ export function intranetModelDiscovery(
     ...fallback,
     kind: 'probe',
     listingNamesConfiguredModel: fallback.kind === 'probe' && fallback.listingNamesConfiguredModel,
-    probe: async () => {
+    probe: async (home, options) => {
       const configured = configuredCatalog(agent, context)
       if (configured) {
         return configured
+      }
+      if (supportsIntranetCliDefaults(agent) && fallback.kind === 'probe') {
+        return fallback.probe(home, options)
       }
       return { origin: 'probe', complete: true, models: [] }
     }

@@ -2,7 +2,7 @@ import { readIntranetSettings } from './intranet-settings'
 import type { BotCreateParams, BotHostUpdates } from '../rpc-contract/bots-params'
 import type { GlobalSettings } from '../settings/global-settings-types'
 import type { Bot } from '../bot-types'
-import { isIntranetAgent } from './intranet-features'
+import { isIntranetAgent, supportsIntranetCliDefaults } from './intranet-features'
 import { INTRANET_BOT_MODEL_REQUIRED, INTRANET_BOT_MODEL_UNREGISTERED } from './intranet-bot-errors'
 import {
   intranetOpenCodeDefaultModel,
@@ -31,6 +31,9 @@ export function intranetBotModel(
           )
         : (settings.cliModels?.[agent]?.models.map((model) => model.id) ?? [])
   if (!allowed.length) {
+    if (supportsIntranetCliDefaults(agent)) {
+      return selected || undefined
+    }
     if (!requireModel && !selected) {
       return undefined
     }

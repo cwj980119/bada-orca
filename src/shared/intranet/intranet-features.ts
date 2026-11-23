@@ -29,6 +29,10 @@ export function isIntranetAgent(agent: string): boolean {
   return agent === 'opencode' || agent === 'opencode2' || agent === 'claude' || agent === 'codex'
 }
 
+export function supportsIntranetCliDefaults(agent: string): boolean {
+  return agent === 'claude' || agent === 'opencode' || agent === 'opencode2'
+}
+
 export function isIntranetSlashCommand(name: string): boolean {
   return ![
     'login',

@@ -46,7 +46,7 @@ export function BotCliDiscoveryNotice({
         <p className="text-xs text-muted-foreground">
           {t(
             'intranet.bots.modelDefault',
-            'Uses the registered company model. Configure it in Intranet settings before starting a conversation.'
+            'Claude Code and OpenCode use existing CLI settings when no company model is registered. You can start chatting without selecting a model.'
           )}
         </p>
       ) : null}
@@ -54,7 +54,7 @@ export function BotCliDiscoveryNotice({
         <p className="text-xs text-muted-foreground">
           {t(
             'intranet.bots.detectedUnsupported',
-            'Installed tools without a supported Bot runtime or enabled company model: {{agents}}',
+            'Installed tools without a supported Bot runtime: {{agents}}',
             { agents: detected.map((agent) => botAgentLabel(agent)).join(', ') }
           )}
         </p>

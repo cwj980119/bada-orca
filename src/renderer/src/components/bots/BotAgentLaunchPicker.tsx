@@ -217,18 +217,15 @@ export function BotAgentLaunchPicker({
         }
       />
       {inherit || value.launch ? null : (
-        // Without its own model the picker shows the owner's chat default, which the bot didn't choose.
         <p className="text-xs text-muted-foreground">
           {t(
             'intranet.bots.modelDefault',
-            'Uses the registered company model. Configure it in Intranet settings before starting a conversation.'
+            'Claude Code and OpenCode use existing CLI settings when no company model is registered. You can start chatting without selecting a model.'
           )}
         </p>
       )}
       {/* With a leading item, that item is the way back. */}
       {!inherit && (value.launch || (withPermission && value.permissionMode)) ? (
-        // The way back from a pick: the bot's chats start on the chat defaults again, for
-        // everything this picker sets (Settings keeps the permission on its own row).
         <Button
           type="button"
           variant="link"
@@ -246,7 +243,7 @@ export function BotAgentLaunchPicker({
             )
           }
         >
-          {t('bots.new.useChatDefaults', 'Use chat defaults')}
+          {t('intranet.bots.useConfiguredDefault', 'Use configured default')}
         </Button>
       ) : null}
     </div>

@@ -35,6 +35,7 @@ import type { BotController } from './bot-controller'
 import type { TookOverNotice } from '../../shared/native-chat/took-over-notice'
 import type { AutomationRunMessage } from '../../shared/automations/automation-run-message'
 import { botStartOptions } from './bot-start-options'
+import { supportsIntranetCliDefaults } from '../../shared/intranet/intranet-features'
 import { supportedStructuredSeedOptions } from '../runtime/agent-session/installation/structured-agent-runtime-metadata'
 
 export type BotChatHost = StructuredAgentTurnHost &
@@ -280,6 +281,7 @@ export async function startBotSession(
     input.background === true
   )
   const launch = supportedStructuredSeedOptions(bot.agent, saved)
+  const cliDefaults = supportsIntranetCliDefaults(bot.agent)
   const dropped = Object.keys(saved).filter((key) => !(key in launch))
   if (dropped.length) {
     console.warn(
@@ -306,12 +308,11 @@ export async function startBotSession(
     },
     worktree: botWorkspaceSelector(bot),
     agent: bot.agent,
-    // A picked model replaces the default selection, so a default effort for another model never rides along.
-    // Background work always replaces it: the chat defaults hold the owner's last pick in any chat.
-    ...(launch.model || input.background
+    // Preserve CLI defaults rather than a model remembered from another chat.
+    ...(launch.model || input.background || cliDefaults
       ? { optionsMode: 'replace-model-selection' as const }
       : {}),
-    ...(Object.keys(options).length || input.background ? { options } : {}),
+    ...(Object.keys(options).length || input.background || cliDefaults ? { options } : {}),
     ...(input.message
       ? {
           firstMessage: {
