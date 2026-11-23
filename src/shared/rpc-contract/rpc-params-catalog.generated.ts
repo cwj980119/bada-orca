@@ -38,6 +38,10 @@ import {
   DesktopBrowserBridgeResultParams
 } from '../browser/client-hosting/desktop-browser-bridge-protocol'
 import { IntranetSsoParams } from '../intranet/intranet-sso'
+import {
+  SshClaudeDiagnosticHandle,
+  SshClaudeDiagnosticStart
+} from '../intranet/ssh-claude-diagnostic'
 import { OrcadMigrationBlobChunkRequestSchema } from '../orcad-migration/orcad-migration-blob-transfer'
 import { OrcadMigrationSnapshotChunkRequestSchema } from '../orcad-migration/orcad-migration-scrollback'
 import {
@@ -1306,6 +1310,10 @@ export const RPC_PARAMS_BY_METHOD = {
   'hostedReview.forBranch': HostedReviewForBranch,
   'hostedReview.getCreationEligibility': HostedReviewCreationEligibility,
   'intranet.codexModels': null,
+  'intranet.sshClaudeCancel': SshClaudeDiagnosticHandle,
+  'intranet.sshClaudeCurrent': null,
+  'intranet.sshClaudeStart': SshClaudeDiagnosticStart,
+  'intranet.sshClaudeStatus': SshClaudeDiagnosticHandle,
   'intranet.ssoCancel': IntranetSsoParams,
   'intranet.ssoSignIn': IntranetSsoParams,
   'intranet.ssoSignOut': IntranetSsoParams,

@@ -2,6 +2,7 @@ import { EXTERNAL_AGENT_METHODS } from './orchestration/external-agent-methods'
 import { LOCAL_BOT_METHODS } from './local-bot-methods'
 import { INTRANET_MODEL_METHODS } from './intranet-models'
 import { INTRANET_SSO_METHODS } from './intranet-sso'
+import { SSH_CLAUDE_DIAGNOSTIC_METHODS } from './ssh-claude-diagnostic'
 import { STATUS_METHODS } from './host-management/status'
 import { DESKTOP_WINDOW_METHODS } from './host-management/desktop-window'
 import { SIDEBAR_INPUT_METHODS } from './sidebar-inputs/sidebar-inputs'
@@ -130,6 +131,7 @@ const SERVICE_RPC_METHODS = [
   ...LOCAL_BOT_METHODS,
   ...INTRANET_MODEL_METHODS,
   ...INTRANET_SSO_METHODS,
+  ...SSH_CLAUDE_DIAGNOSTIC_METHODS,
   ...NOTIFICATION_METHODS,
   ...STATS_METHODS,
   ...USAGE_ANALYTICS_METHODS,

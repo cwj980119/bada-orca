@@ -1,0 +1,75 @@
+import { z } from 'zod'
+
+const remoteWord = z
+  .string()
+  .trim()
+  .min(1)
+  .max(2048)
+  .refine((value) => !/[\0\r\n]/.test(value))
+
+export const SshClaudeDiagnosticStart = z
+  .object({
+    destination: z
+      .string()
+      .trim()
+      .min(1)
+      .max(255)
+      .regex(/^[A-Za-z0-9][A-Za-z0-9_.@:[\]-]*$/),
+    directory: remoteWord.refine((value) => value.startsWith('/')),
+    executable: remoteWord.default('claude'),
+    timeoutSeconds: z.number().int().min(20).max(120).default(60)
+  })
+  .strict()
+export const SshClaudeDiagnosticHandle = z.object({ id: z.string().uuid() }).strict()
+export type SshClaudeDiagnosticInput = z.infer<typeof SshClaudeDiagnosticStart>
+export type SshClaudeDiagnosticPhase = 'connection' | 'response' | 'resume' | 'cancellation'
+export type SshClaudeDiagnosticProblem =
+  | 'ssh_unavailable'
+  | 'authentication'
+  | 'host_key'
+  | 'ssh_failed'
+  | 'linux_required'
+  | 'directory_missing'
+  | 'claude_missing'
+  | 'process_control_missing'
+  | 'claude_failed'
+  | 'invalid_response'
+  | 'resume_failed'
+  | 'timed_out'
+  | 'output_limit'
+  | 'cancelled'
+  | 'stop_unconfirmed'
+  | 'remote_terminated'
+  | 'internal_error'
+export type SshClaudeDiagnosticStep = {
+  phase: SshClaudeDiagnosticPhase
+  state: 'pending' | 'running' | 'passed' | 'failed' | 'skipped'
+  problem?: SshClaudeDiagnosticProblem
+}
+export type SshClaudeDiagnosticResult = {
+  id: string
+  state: 'running' | 'cancelling' | 'passed' | 'failed' | 'cancelled'
+  startedAt: string
+  finishedAt?: string
+  steps: SshClaudeDiagnosticStep[]
+  claudeVersion?: string
+  stopVerified?: boolean
+  problem?: SshClaudeDiagnosticProblem
+}
+
+export function sshClaudeDiagnosticReport(result: SshClaudeDiagnosticResult): string {
+  return JSON.stringify(
+    {
+      format: 'orca-ssh-claude-diagnostic-v1',
+      state: result.state,
+      startedAt: result.startedAt,
+      finishedAt: result.finishedAt,
+      claudeVersion: result.claudeVersion,
+      steps: result.steps.map(({ phase, state, problem }) => ({ phase, state, problem })),
+      stopVerified: result.stopVerified,
+      problem: result.problem
+    },
+    null,
+    2
+  )
+}

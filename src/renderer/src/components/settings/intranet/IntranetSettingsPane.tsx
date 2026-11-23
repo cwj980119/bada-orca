@@ -13,6 +13,7 @@ import { SettingsGroup } from '../section-layout/SettingsGroup'
 import { SettingsRow } from '../form-controls/SettingsFormControls'
 import { IntranetSsoSettings } from './sso/IntranetSsoSettings'
 import { ssoSettingError } from './sso/sso-setting-errors'
+import { SshClaudeDiagnostic } from './SshClaudeDiagnostic'
 import { useTranslate } from '@/i18n/use-translate'
 import {
   IntranetSettingsSchema,
@@ -194,6 +195,7 @@ export function IntranetSettingsPane({
           }
         />
       </SettingsGroup>
+      <SshClaudeDiagnostic />
       <CodexModelSettings
         value={draft.cliModels?.codex ?? { model: '', models: [] }}
         onChange={({ model, models }) => {
