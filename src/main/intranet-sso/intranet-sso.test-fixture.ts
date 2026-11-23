@@ -1,0 +1,184 @@
+import { createServer } from 'node:http'
+import { createHash } from 'node:crypto'
+import { exportJWK, generateKeyPair, SignJWT } from 'jose'
+import {
+  defaultIntranetSsoSettings,
+  type IntranetSsoIdentity,
+  type IntranetSsoSettings
+} from '../../shared/intranet/intranet-sso'
+import { IntranetSsoService } from './intranet-sso-service'
+import type { IntranetSsoProviderClient } from './intranet-sso-provider'
+
+export async function createSsoFixture(
+  options: {
+    nonce?: string
+    audience?: string
+    subject?: string
+    protocol?: 'oidc' | 'oauth2'
+    strayState?: boolean
+    occupiedCallbackPort?: boolean
+    provider?: IntranetSsoProviderClient
+  } = {}
+) {
+  const { publicKey, privateKey } = await generateKeyPair('RS256')
+  const jwk = await exportJWK(publicKey)
+  let authorization: URL | null = null
+  let pkceVerified = false
+  let callback: Promise<string> | null = null
+  const identities: IntranetSsoIdentity[] = []
+  let retained: IntranetSsoIdentity | null = null
+  let base = ''
+  const server = createServer((request, response) => {
+    void (async () => {
+      response.setHeader('content-type', 'application/json')
+      if (request.url === '/.well-known/openid-configuration') {
+        response.end(
+          JSON.stringify({
+            issuer: base,
+            authorization_endpoint: `${base}/authorize`,
+            token_endpoint: `${base}/token`,
+            jwks_uri: `${base}/jwks`,
+            code_challenge_methods_supported: ['S256']
+          })
+        )
+      } else if (request.url === '/jwks') {
+        response.end(JSON.stringify({ keys: [{ ...jwk, alg: 'RS256' }] }))
+      } else if (request.url === '/profile') {
+        if (request.headers.authorization !== 'Bearer company-access-token') {
+          response.writeHead(401)
+          response.end('{}')
+          return
+        }
+        response.end(
+          JSON.stringify({ uid: 'employee-7', name: 'Alice', email: 'alice@company.internal' })
+        )
+      } else if (request.url === '/token') {
+        let text = ''
+        for await (const part of request) {
+          text += String(part)
+        }
+        const form = new URLSearchParams(text)
+        pkceVerified =
+          createHash('sha256')
+            .update(form.get('code_verifier') ?? '')
+            .digest('base64url') === authorization?.searchParams.get('code_challenge') &&
+          form.get('redirect_uri') === authorization?.searchParams.get('redirect_uri') &&
+          form.get('code') === 'one-time-code'
+        if (!pkceVerified) {
+          response.writeHead(400)
+          response.end('{}')
+          return
+        }
+        const idToken = await new SignJWT({
+          nonce: options.nonce ?? authorization!.searchParams.get('nonce'),
+          name: 'Alice',
+          email: 'alice@company.internal'
+        })
+          .setProtectedHeader({ alg: 'RS256' })
+          .setIssuer(base)
+          .setAudience(options.audience ?? 'desktop-test-client')
+          .setSubject(options.subject ?? 'employee-7')
+          .setIssuedAt()
+          .setExpirationTime('5m')
+          .sign(privateKey)
+        response.end(
+          JSON.stringify({
+            access_token: 'company-access-token',
+            refresh_token: 'company-refresh-token',
+            token_type: 'Bearer',
+            expires_in: 300,
+            id_token: idToken
+          })
+        )
+      } else {
+        response.writeHead(404)
+        response.end('{}')
+      }
+    })().catch(() => {
+      response.writeHead(500)
+      response.end('{}')
+    })
+  })
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const address = server.address()
+  if (!address || typeof address === 'string') {
+    throw new Error('No fixture port')
+  }
+  base = `http://127.0.0.1:${address.port}`
+  const callbackProbe = createServer()
+  await new Promise<void>((resolve) => callbackProbe.listen(0, '127.0.0.1', resolve))
+  const callbackAddress = callbackProbe.address()
+  if (!options.occupiedCallbackPort) {
+    await new Promise<void>((resolve) => callbackProbe.close(() => resolve()))
+  }
+  if (!callbackAddress || typeof callbackAddress === 'string') {
+    throw new Error('No callback fixture port')
+  }
+  let settings: IntranetSsoSettings = {
+    ...defaultIntranetSsoSettings(),
+    enabled: true,
+    callbackPort: callbackAddress.port,
+    issuer: base,
+    clientId: 'desktop-test-client',
+    protocol: options.protocol ?? 'oidc',
+    authorizationUrl: `${base}/authorize`,
+    tokenUrl: `${base}/token`,
+    userInfoUrl: `${base}/profile`,
+    subjectClaim: 'uid'
+  }
+  const service = new IntranetSsoService({
+    settings: () => settings,
+    provider: options.provider,
+    session: {
+      read: () => retained,
+      save: (_key, identity) => {
+        identities.push(identity)
+        retained = identity
+        return true
+      },
+      clear: () => {
+        retained = null
+      }
+    },
+    openBrowser: async (value) => {
+      authorization = new URL(value)
+      const target = new URL(authorization.searchParams.get('redirect_uri')!)
+      target.searchParams.set('code', 'one-time-code')
+      target.searchParams.set('state', authorization.searchParams.get('state')!)
+      if (options.strayState) {
+        const stray = new URL(target)
+        stray.searchParams.set('state', 'another-login')
+        const response = await fetch(stray)
+        await response.text()
+        if (response.status !== 400 || service.status().state !== 'authorizing') {
+          throw new Error('Stray callback ended sign-in')
+        }
+      }
+      callback = fetch(target).then((response) => response.text())
+    }
+  })
+  return {
+    service,
+    identities,
+    get pkceVerified() {
+      return pkceVerified
+    },
+    get retained() {
+      return retained
+    },
+    setSettings: (next: Partial<IntranetSsoSettings>) => {
+      settings = { ...settings, ...next }
+      service.status()
+    },
+    async close() {
+      service.cancel()
+      await callback?.catch(() => undefined)
+      if (callbackProbe.listening) {
+        callbackProbe.closeAllConnections()
+        await new Promise<void>((resolve) => callbackProbe.close(() => resolve()))
+      }
+      server.closeAllConnections()
+      await new Promise<void>((resolve) => server.close(() => resolve()))
+    }
+  }
+}

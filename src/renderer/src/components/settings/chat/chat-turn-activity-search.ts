@@ -1,0 +1,72 @@
+import { translate } from '@/i18n/i18n'
+import { translateSearchKeyword } from '../search/settings-search-keywords'
+import type { Translate } from '@/i18n/use-translate'
+import { createLocalizedCatalog } from '@/i18n/localized-catalog'
+import type { SettingsSearchEntry } from '../search/settings-search'
+import { NATIVE_CHAT_TURN_DIFF_SETTING_SECTION_ID } from './native-chat-turn-diff-setting-target'
+import { NATIVE_CHAT_OPENED_PULL_REQUESTS_SETTING_SECTION_ID } from './native-chat-opened-pull-requests-setting-target'
+import { NATIVE_CHAT_CI_RESULT_LINES_SETTING_SECTION_ID } from './native-chat-ci-result-lines-setting-target'
+
+export const getChatTurnActivityTitle = (t: Translate = translate): string =>
+  t('components.settings.nativeChat.turnActivityTitle', 'Turn activity')
+
+export const getChatTurnActivityEntriesByKey = createLocalizedCatalog(
+  (t) =>
+    ({
+      turnDiffs: {
+        targetSectionId: NATIVE_CHAT_TURN_DIFF_SETTING_SECTION_ID,
+        title: t('components.settings.nativeChat.turnDiffsTitle', 'Turn diffs'),
+        description: t(
+          'components.settings.nativeChat.turnDiffsCopy',
+          'Shows the files each turn changed, with line counts, below the reply.'
+        ),
+        keywords: [
+          ...translateSearchKeyword(
+            'components.settings.nativeChat.turnDiffsSearchChangedFiles',
+            'changed files'
+          ),
+          ...translateSearchKeyword('components.settings.nativeChat.turnDiffsSearchEdits', 'edits')
+        ]
+      },
+      openedPullRequests: {
+        targetSectionId: NATIVE_CHAT_OPENED_PULL_REQUESTS_SETTING_SECTION_ID,
+        title: t('components.settings.nativeChat.openedPullRequestsTitle', 'Opened pull requests'),
+        description: t(
+          'components.settings.nativeChat.openedPullRequestsCopy',
+          'Shows the pull requests each turn opened, with titles and line counts, below the reply.'
+        ),
+        keywords: [
+          ...translateSearchKeyword(
+            'components.settings.nativeChat.openedPullRequestsSearchPr',
+            'PR'
+          ),
+          ...translateSearchKeyword(
+            'components.settings.nativeChat.openedPullRequestsSearchCard',
+            'pull request card'
+          )
+        ]
+      },
+      ciResultLines: {
+        targetSectionId: NATIVE_CHAT_CI_RESULT_LINES_SETTING_SECTION_ID,
+        title: t('components.settings.nativeChat.ciResultLinesTitle', 'CI result lines'),
+        description: t(
+          'components.settings.nativeChat.ciResultLinesCopy',
+          'A line in the chat when CI finishes on a pull request the agent opened or pushed to.'
+        ),
+        keywords: [
+          ...translateSearchKeyword(
+            'components.settings.nativeChat.ciResultLinesSearchChecks',
+            'checks'
+          ),
+          ...translateSearchKeyword('components.settings.nativeChat.ciResultLinesSearchPr', 'PR')
+        ]
+      }
+    }) satisfies Record<string, SettingsSearchEntry>
+)
+
+export function getChatTurnActivitySearchEntries(t?: Translate): SettingsSearchEntry[] {
+  return [
+    { title: getChatTurnActivityTitle(t) },
+    ...Object.values(getChatTurnActivityEntriesByKey())
+  ]
+}
