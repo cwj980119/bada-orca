@@ -3161,8 +3161,14 @@
     },
     "sso": {
       "authorizationUrl": "Authorization endpoint",
+      "callbackHelp": "Register this fixed redirect URI with BADA:",
       "callbackPort": "Callback port",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "clientSecretBasic": "client_secret_basic",
       "clientSecretEnv": "Client secret environment variable",
+      "clientSecretPost": "client_secret_post",
+      "credentialsRequired": "Save the Client ID issued by BADA to enable sign-in.",
       "enabled": "Enable BADA sign-in",
       "errors": {
         "callback_failed": "The login callback failed. Retry.",
@@ -3174,17 +3180,23 @@
         "invalid_issuer": "The callback issuer does not match the configured provider.",
         "invalid_metadata": "The issuer metadata is invalid or does not support PKCE S256.",
         "invalid_token": "The authentication response could not be verified. Check the issuer, client ID and server clock.",
-        "missing_client_secret": "Enter the Client Secret issued by BADA before signing in.",
+        "missing_client_secret": "BADA sign-in is not configured in this build. Contact your administrator.",
         "request_failed": "Could not reach the company authentication server. Check the endpoint, certificate and allowed hosts.",
-        "sign_in_failed": "BADA sign-in failed. Check the saved settings and retry.",
+        "sign_in_failed": "BADA sign-in failed. Retry or contact your administrator.",
         "storage_failed": "Could not update the protected account record. Retry or check local file permissions.",
         "timeout": "BADA sign-in timed out. Retry.",
         "unavailable": "Could not read BADA sign-in status. Retry in the updated desktop app.",
-        "unconfigured": "Save your BADA Client ID before signing in."
+        "unconfigured": "BADA sign-in is not configured in this build. Contact your administrator."
       },
+      "issuer": "Issuer URL",
       "label": "Provider display name",
       "protocol": "Authentication protocol",
       "publicClient": "Uses a native/public client with Authorization Code + PKCE (S256). No client secret is embedded. Providers requiring a client secret need a company backend adapter.",
+      "refresh": "Refresh status",
+      "saveFirst": "Save the connection settings below before signing in.",
+      "scopeHelp": "BADA sign-in connects your app account. CLI and model authentication use their existing settings. Disconnecting does not sign the browser out of BADA.",
+      "scopes": "Scopes",
+      "secretHelp": "Paste the Client Secret issued by BADA, then sign in. It is used for this sign-in only and is not saved.",
       "states": {
         "authorizing": "Waiting for BADA sign-in",
         "error": "Sign-in failed",
@@ -3195,6 +3207,7 @@
         "unconfigured": "Not configured"
       },
       "subjectClaim": "User ID field",
+      "tokenEndpointAuthMethod": "Client authentication",
       "tokenUrl": "Token endpoint",
       "userInfoUrl": "User profile endpoint"
     }

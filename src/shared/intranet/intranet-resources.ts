@@ -11,7 +11,7 @@ export const IntranetMcpServerSchema = z
     id: z
       .string()
       .regex(/^[a-zA-Z0-9_-]{1,64}$/)
-      .refine((id) => id !== 'orca-resources'),
+      .refine((id) => id !== 'orca-resources' && id !== 'orca-bada'),
     name: z.string().trim().max(128),
     purpose: z.enum(['tools', 'knowledge']),
     enabled: z.boolean(),

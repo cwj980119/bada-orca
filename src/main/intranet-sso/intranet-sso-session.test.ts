@@ -54,17 +54,34 @@ const identity = {
   expiresAt: 4_000_000_000_000
 }
 
-it('persists only a sealed account record bound to its provider configuration', () => {
+it('persists a sealed account and tokens bound to the provider configuration', () => {
   const { path, session } = fixture()
-  expect(session.save('provider-a', identity)).toBe(true)
+  expect(
+    session.save('provider-a', {
+      identity,
+      tokens: {
+        accessToken: 'bada-access-secret',
+        idToken: 'bada-id-secret',
+        expiresAt: 4_000_000_000_000
+      }
+    })
+  ).toBe(true)
   const text = readFileSync(path, 'utf8')
   expect(text).not.toContain('alice@company.internal')
+  expect(text).not.toContain('bada-access-secret')
   expect(session.read('provider-a')).toEqual({
-    issuer: 'https://company.internal',
-    subject: 'employee-7',
-    name: 'Alice',
-    email: 'alice@company.internal',
-    expiresAt: 4_000_000_000_000
+    identity: {
+      issuer: 'https://company.internal',
+      subject: 'employee-7',
+      name: 'Alice',
+      email: 'alice@company.internal',
+      expiresAt: 4_000_000_000_000
+    },
+    tokens: {
+      accessToken: 'bada-access-secret',
+      idToken: 'bada-id-secret',
+      expiresAt: 4_000_000_000_000
+    }
   })
   expect(session.read('provider-b')).toBeNull()
   session.clear()
@@ -73,6 +90,6 @@ it('persists only a sealed account record bound to its provider configuration', 
 
 it('does not fall back to plaintext when protected storage is unavailable', () => {
   const { path, session } = fixture(false)
-  expect(session.save('provider-a', identity)).toBe(false)
+  expect(session.save('provider-a', { identity })).toBe(false)
   expect(() => readFileSync(path)).toThrow()
 })

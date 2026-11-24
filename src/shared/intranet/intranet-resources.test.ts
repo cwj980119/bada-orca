@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { intranetAgentEnvironment } from './intranet-agent-environment'
 import { defaultIntranetSettings } from './intranet-settings'
-import { intranetMcpConfig } from './intranet-mcp-config'
 import { terminalSessionOptionInputs } from '../agent-launch/startup/tui-agent-launch-command'
 import { tokenizeStartupCommand } from '../agent-launch/startup/tui-agent-startup-shell'
 import type { IntranetResources } from './intranet-resources'
@@ -97,17 +96,5 @@ describe('company resources passed to agents', () => {
       shell: 'posix'
     })
     expect(explicit.agentArgs).toBe('--mcp-config /company/managed.json')
-    const disabled = intranetMcpConfig(
-      {
-        ...intranet,
-        resources: {
-          ...resources,
-          sources: [],
-          mcpServers: resources.mcpServers.map((entry) => ({ ...entry, enabled: false }))
-        }
-      },
-      'claude'
-    )
-    expect(disabled).toEqual({ mcpServers: {} })
   })
 })

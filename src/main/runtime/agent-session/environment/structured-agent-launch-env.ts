@@ -4,6 +4,7 @@ import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-co
 import { resolveTuiAgentLaunchEnv } from '../../../../shared/agent-launch/choices/tui-agent-launch-defaults'
 import { overlayEnvironmentVariables } from '../../../../shared/shell/launch/environment-overlay'
 import type { GlobalSettings } from '../../../../shared/settings/global-settings-types'
+import { withBadaAgentEnvironment } from '../../../intranet-sso/runtime-intranet-sso'
 
 export type StructuredAgentLaunchEnvSettings = Pick<
   GlobalSettings,
@@ -35,17 +36,19 @@ export function structuredAgentLaunchEnv(
   platform: NodeJS.Platform = process.platform
 ): Record<string, string> {
   const agentEnv = isTuiAgent(agent) ? resolveTuiAgentLaunchEnv(agent, settings) : {}
-  return intranetAgentEnvironment(
-    agent,
-    settings.intranet,
-    overlayEnvironmentVariables(
+  return withBadaAgentEnvironment(
+    intranetAgentEnvironment(
+      agent,
+      settings.intranet,
       overlayEnvironmentVariables(
-        configuredProxyEnvUnder(settings, [agentEnv, accountEnv]),
-        agentEnv,
+        overlayEnvironmentVariables(
+          configuredProxyEnvUnder(settings, [agentEnv, accountEnv]),
+          agentEnv,
+          platform
+        ),
+        accountEnv,
         platform
-      ),
-      accountEnv,
-      platform
+      )
     )
   )
 }

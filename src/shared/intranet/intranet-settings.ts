@@ -1,7 +1,7 @@
 import * as z from 'zod'
 import { isIntranetHostEntry } from './intranet-host-entry'
 import { IntranetResourcesSchema } from './intranet-resources'
-import { badaSsoSettings, IntranetSsoSettingsSchema } from './intranet-sso'
+import { BADA_SSO_ISSUER, badaSsoSettings, IntranetSsoSettingsSchema } from './intranet-sso'
 
 const endpoint = z
   .string()
@@ -146,7 +146,7 @@ export function readIntranetSettings(value: unknown): IntranetSettings {
 }
 
 export function intranetAllowedHosts(settings: IntranetSettings): string[] {
-  const hosts = [...settings.allowedHosts]
+  const hosts = [new URL(BADA_SSO_ISSUER).hostname, ...settings.allowedHosts]
   const sso = badaSsoSettings(settings.sso)
   for (const endpoint of [
     settings.opencode.baseUrl,

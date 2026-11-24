@@ -1,6 +1,6 @@
 import { app, shell } from 'electron'
 import { join } from 'node:path'
-import { badaSsoSettings } from '../../shared/intranet/intranet-sso'
+import { badaBuildSettings, badaBuildClientSecret } from '../intranet-sso/bada-build-configuration'
 import { IntranetSsoService } from '../intranet-sso/intranet-sso-service'
 import { IntranetSsoSessionFile } from '../intranet-sso/intranet-sso-session'
 import { registerRuntimeIntranetSso } from '../intranet-sso/runtime-intranet-sso'
@@ -8,18 +8,17 @@ import { getCanonicalUserDataPath } from '../persistence/loading-store/user-data
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 
 export function installDesktopIntranetSso(runtime: OrcaRuntimeService): void {
-  const store = runtime.requireStore()
   const service = new IntranetSsoService({
-    settings: () => badaSsoSettings(store.getSettings().intranet?.sso),
+    settings: badaBuildSettings,
+    clientSecret: badaBuildClientSecret,
     openBrowser: (url) => shell.openExternal(url),
     session: new IntranetSsoSessionFile(
       join(getCanonicalUserDataPath(), 'intranet-sso-session.enc')
     )
   })
-  registerRuntimeIntranetSso(runtime, service)
-  const stop = store.onSettingsChanged?.(() => service.status())
+  const stop = registerRuntimeIntranetSso(runtime, service)
   app.once('will-quit', () => {
     service.cancel()
-    stop?.()
+    stop()
   })
 }

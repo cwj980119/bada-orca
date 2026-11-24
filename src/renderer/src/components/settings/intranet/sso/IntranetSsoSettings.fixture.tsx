@@ -31,26 +31,16 @@ export const unconfigured = defineFixture({
   setup: () => setup({ ...signedOut, state: 'unconfigured' }),
   render: () => (
     <div className="settings-view-shell bg-background p-8">
-      <IntranetSsoSettings value={undefined} savedValue={undefined} onChange={() => {}} />
+      <IntranetSsoSettings />
     </div>
   )
 })
 export const oidc = defineFixture({
   width: 720,
   setup: () => setup(signedOut),
-  interact: (frame) => {
-    const input = frame.querySelector<HTMLInputElement>('input[type="password"]')
-    if (input) {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(
-        input,
-        'test-only-secret'
-      )
-      input.dispatchEvent(new Event('input', { bubbles: true }))
-    }
-  },
   render: () => (
     <div className="settings-view-shell bg-background p-8">
-      <IntranetSsoSettings value={configured} savedValue={configured} onChange={() => {}} />
+      <IntranetSsoSettings />
     </div>
   )
 })
@@ -71,7 +61,7 @@ export const connected = defineFixture({
     }),
   render: () => (
     <div className="settings-view-shell bg-background p-8">
-      <IntranetSsoSettings value={configured} savedValue={configured} onChange={() => {}} />
+      <IntranetSsoSettings />
     </div>
   )
 })
@@ -80,7 +70,7 @@ export const missingSecret = defineFixture({
   setup: () => setup({ ...signedOut, state: 'error', error: 'missing_client_secret' }),
   render: () => (
     <div className="settings-view-shell bg-background p-8">
-      <IntranetSsoSettings value={configured} savedValue={configured} onChange={() => {}} />
+      <IntranetSsoSettings />
     </div>
   )
 })
@@ -89,7 +79,7 @@ export const narrow = defineFixture({
   setup: () => setup(signedOut),
   render: () => (
     <div className="settings-view-shell bg-background p-4">
-      <IntranetSsoSettings value={configured} savedValue={configured} onChange={() => {}} />
+      <IntranetSsoSettings />
     </div>
   )
 })

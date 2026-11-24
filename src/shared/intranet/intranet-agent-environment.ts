@@ -6,6 +6,7 @@ import {
 } from './intranet-opencode-models'
 import { readIntranetSettings } from './intranet-settings'
 import { intranetMcpServers, mergeIntranetOpenCodeMcp } from './intranet-mcp-config'
+import { parseJsoncObject } from '../workspace-setup/setup-script-import-parsers'
 
 export function intranetAgentEnvironment(
   agent: string,
@@ -55,11 +56,11 @@ export function intranetAgentEnvironment(
     }
     let ownConfig: Record<string, unknown> = {}
     if (result.OPENCODE_CONFIG_CONTENT) {
-      const parsed: unknown = JSON.parse(result.OPENCODE_CONFIG_CONTENT)
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      const parsed = parseJsoncObject(result.OPENCODE_CONFIG_CONTENT)
+      if (!parsed) {
         throw new Error('OpenCode inline configuration must be an object.')
       }
-      ownConfig = parsed as Record<string, unknown>
+      ownConfig = parsed
     }
     const providerKey = configVersion === 'v2' ? 'providers' : 'provider'
     const provider =

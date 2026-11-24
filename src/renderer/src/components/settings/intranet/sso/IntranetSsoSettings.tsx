@@ -1,47 +1,15 @@
-import { useId, useState } from 'react'
 import { LogIn, LogOut, Loader2 } from 'lucide-react'
 import { useIntlLocale, useTranslate } from '@/i18n/use-translate'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
 import { SettingsGroup } from '../../section-layout/SettingsGroup'
-import { SettingsRow } from '../../form-controls/SettingsFormControls'
-import {
-  badaSsoSettings,
-  BADA_SSO_ISSUER,
-  DEFAULT_INTRANET_SSO_CALLBACK_PORT,
-  INTRANET_SSO_CALLBACK_PATH,
-  type IntranetSsoSettings as SsoSettings
-} from '../../../../../../shared/intranet/intranet-sso'
 import { useIntranetSso } from './use-intranet-sso'
 import { INTRANET_SSO_SETTINGS_TARGET_ID } from '../../navigation/settings-navigation-types'
 
-export function IntranetSsoSettings({
-  value,
-  savedValue,
-  onChange
-}: {
-  value: SsoSettings | undefined
-  savedValue: SsoSettings | undefined
-  onChange: (value: SsoSettings) => void
-}): React.JSX.Element {
+export function IntranetSsoSettings(): React.JSX.Element {
   const t = useTranslate()
   const locale = useIntlLocale()
-  const id = useId()
-  const [clientSecret, setClientSecret] = useState('')
-  const config = badaSsoSettings(value)
-  const saved = badaSsoSettings(savedValue)
-  const dirty = JSON.stringify(config) !== JSON.stringify(saved)
-  const auth = useIntranetSso(JSON.stringify(saved))
-  const edit = <K extends keyof SsoSettings>(key: K, next: SsoSettings[K]) =>
-    onChange(badaSsoSettings({ ...config, [key]: next }))
+  const auth = useIntranetSso('bada')
   const state = auth.status?.state ?? 'loading'
   const stateLabels = {
     loading: 'Loading',
@@ -52,133 +20,51 @@ export function IntranetSsoSettings({
     expired: 'Sign-in expired',
     error: 'Sign-in failed'
   }
-  const problem = auth.status?.error
-  const signIn = () => {
-    const secret = clientSecret
-    setClientSecret('')
-    void auth.run('intranet.ssoSignIn', { clientSecret: secret })
-  }
   return (
     <SettingsGroup
       id={INTRANET_SSO_SETTINGS_TARGET_ID}
       title={t('intranet.sso.title', 'BADA sign-in')}
       description={t(
         'intranet.sso.description',
-        'Sign in through BADA on the company network. Save your issued Client ID before signing in.'
+        'Sign in with BADA to connect your account to Orca and company tools.'
       )}
     >
-      <SettingsRow
-        label={t('intranet.sso.issuer', 'Issuer URL')}
-        control={
-          <span className="break-all font-mono text-settings-detail">{BADA_SSO_ISSUER}</span>
-        }
-      />
-      <SettingsRow
-        label={t('intranet.sso.clientId', 'Client ID')}
-        labelId={`${id}-clientId-label`}
-        control={
-          <Input
-            aria-labelledby={`${id}-clientId-label`}
-            value={config.clientId}
-            onChange={(event) => edit('clientId', event.target.value)}
-            className="w-80 max-w-full"
-            autoComplete="off"
-          />
-        }
-      />
-      <SettingsRow
-        label={t('intranet.sso.clientSecret', 'Client Secret')}
-        labelId={`${id}-clientSecret-label`}
-        description={t(
-          'intranet.sso.secretHelp',
-          'Paste the Client Secret issued by BADA, then sign in. It is used for this sign-in only and is not saved.'
-        )}
-        control={
-          <Input
-            type="password"
-            aria-labelledby={`${id}-clientSecret-label`}
-            value={clientSecret}
-            onChange={(event) => setClientSecret(event.target.value)}
-            maxLength={8192}
-            className="w-80 max-w-full"
-            autoComplete="off"
-            spellCheck={false}
-          />
-        }
-      />
-      <SettingsRow
-        label={t('intranet.sso.tokenEndpointAuthMethod', 'Client authentication')}
-        control={
-          <Select
-            value={config.tokenEndpointAuthMethod}
-            onValueChange={(method: SsoSettings['tokenEndpointAuthMethod']) =>
-              edit('tokenEndpointAuthMethod', method)
-            }
-          >
-            <SelectTrigger
-              className="w-80 max-w-full"
-              aria-label={t('intranet.sso.tokenEndpointAuthMethod', 'Client authentication')}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="client_secret_basic">
-                {t('intranet.sso.clientSecretBasic', 'client_secret_basic')}
-              </SelectItem>
-              <SelectItem value="client_secret_post">
-                {t('intranet.sso.clientSecretPost', 'client_secret_post')}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        }
-      />
-      <div
-        data-settings-row=""
-        className="space-y-2 py-3 text-settings-detail text-muted-foreground"
-      >
-        <p>
-          {t('intranet.sso.scopes', 'Scopes')}: <span className="font-mono">{config.scopes}</span>
-        </p>
-        <p>{t('intranet.sso.callbackHelp', 'Register this fixed redirect URI with BADA:')}</p>
-        <p className="break-all font-mono">
-          http://127.0.0.1:{DEFAULT_INTRANET_SSO_CALLBACK_PORT}
-          {INTRANET_SSO_CALLBACK_PATH}
-        </p>
-      </div>
       <div data-settings-row="" className="space-y-3 py-3">
+        {auth.status?.identity ? (
+          <div className="space-y-1">
+            <p className="text-sm font-medium">
+              {auth.status.identity.name ?? auth.status.identity.subject}
+            </p>
+            {auth.status.identity.email ? (
+              <p className="text-settings-detail text-muted-foreground">
+                {auth.status.identity.email}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{t(`intranet.sso.states.${state}`, stateLabels[state])}</Badge>
-          {auth.status?.identity ? (
-            <span className="break-all text-settings-detail">
-              {auth.status.identity.name ?? auth.status.identity.subject}
-              {auth.status.identity.email ? ` · ${auth.status.identity.email}` : ''}
+          {state === 'signed-in' && auth.status?.identity ? (
+            <span className="text-settings-detail text-muted-foreground">
+              {t('intranet.sso.expires', 'Valid until {{time}}', {
+                time: new Date(auth.status.identity.expiresAt).toLocaleString(locale)
+              })}
             </span>
           ) : null}
         </div>
-        {auth.status?.identity && state === 'signed-in' ? (
-          <p className="text-settings-detail text-muted-foreground">
-            {t('intranet.sso.expires', 'Valid until {{time}}', {
-              time: new Date(auth.status.identity.expiresAt).toLocaleString(locale)
-            })}
-          </p>
-        ) : null}
-        {problem || auth.error ? (
+        {auth.status?.error || auth.error ? (
           <p role="alert" className="text-settings-detail text-destructive">
             {t(
-              `intranet.sso.errors.${problem ?? 'unavailable'}`,
+              `intranet.sso.errors.${auth.status?.error ?? 'unavailable'}`,
               'Could not read BADA sign-in status. Retry in the updated desktop app.'
             )}
           </p>
         ) : null}
-        {dirty ? (
-          <p className="text-settings-detail text-muted-foreground">
-            {t('intranet.sso.saveFirst', 'Save the connection settings below before signing in.')}
-          </p>
-        ) : !saved.enabled ? (
+        {state === 'unconfigured' ? (
           <p className="text-settings-detail text-muted-foreground">
             {t(
-              'intranet.sso.credentialsRequired',
-              'Save the Client ID issued by BADA to enable sign-in.'
+              'intranet.sso.buildRequired',
+              'BADA sign-in is not configured in this build. Contact your administrator.'
             )}
           </p>
         ) : null}
@@ -197,8 +83,8 @@ export function IntranetSsoSettings({
             <Button
               type="button"
               size="sm"
-              disabled={!saved.enabled || dirty || auth.busy || !clientSecret}
-              onClick={signIn}
+              disabled={auth.busy || state === 'loading' || state === 'unconfigured'}
+              onClick={() => void auth.run('intranet.ssoSignIn')}
             >
               {auth.busy ? (
                 <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
@@ -220,22 +106,7 @@ export function IntranetSsoSettings({
               {t('intranet.sso.signOut', 'Disconnect account')}
             </Button>
           ) : null}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={auth.busy}
-            onClick={() => void auth.run('intranet.ssoStatus')}
-          >
-            {t('intranet.sso.refresh', 'Refresh status')}
-          </Button>
         </div>
-        <p className="text-settings-detail text-muted-foreground">
-          {t(
-            'intranet.sso.scopeHelp',
-            'BADA sign-in connects your app account. CLI and model authentication use their existing settings. Disconnecting does not sign the browser out of BADA.'
-          )}
-        </p>
         {state === 'signed-in' && auth.status?.persistence === 'memory' ? (
           <p className="text-settings-detail text-muted-foreground">
             {t(

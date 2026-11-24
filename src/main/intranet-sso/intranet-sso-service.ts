@@ -5,27 +5,46 @@ import {
   IntranetSsoSettingsSchema,
   type IntranetSsoIdentity,
   type IntranetSsoSettings,
-  type IntranetSsoStatus
+  type IntranetSsoStatus,
+  type IntranetSsoSession,
+  type IntranetSsoTokens,
+  type BadaCredentials
 } from '../../shared/intranet/intranet-sso'
 import { serveHeldLoopbackCallback } from '../orca-profiles/cloud-auth/loopback-callback'
 import { IntranetSsoError, IntranetSsoProviderClient } from './intranet-sso-provider'
 import { ssoConfigurationKey } from './intranet-sso-session'
+import {
+  orcaCallbackReceivedPage,
+  orcaCallbackOutcome
+} from '../orca-profiles/cloud-auth/profile-cloud-callback-page'
 
 type SessionPort = {
-  read(key: string): IntranetSsoIdentity | null
-  save(key: string, identity: IntranetSsoIdentity): boolean
+  read(key: string): IntranetSsoSession | null
+  save(key: string, session: IntranetSsoSession): boolean
   clear(): void
 }
 
-const PAGE =
-  '<!doctype html><meta charset="utf-8"><title>BADA 로그인</title><p>BADA 로그인 처리 중 / Completing BADA sign-in…</p>'
-const SUCCESS =
-  '<p>BADA 로그인이 완료되었습니다. 앱으로 돌아가세요. / Sign-in complete. Return to the app.</p>'
-const FAILED =
-  '<p>BADA 로그인을 완료하지 못했습니다. 앱에서 다시 시도하세요. / Sign-in failed. Retry in the app.</p>'
+const PAGE = orcaCallbackReceivedPage({
+  brand: 'ORCA · BADA',
+  heading: '로그인을 마무리하고 있어요',
+  line: '계정 정보를 확인하는 동안 잠시만 기다려 주세요.'
+})
+const SUCCESS = orcaCallbackOutcome({
+  ok: true,
+  brand: 'ORCA · BADA',
+  heading: 'BADA 로그인 완료',
+  line: '이제 Orca 앱으로 돌아가 작업을 이어가세요. 이 창은 닫아도 괜찮습니다.'
+})
+const FAILED = orcaCallbackOutcome({
+  ok: false,
+  brand: 'ORCA · BADA',
+  heading: '로그인을 완료하지 못했어요',
+  line: 'Orca 앱으로 돌아가 BADA 로그인을 다시 시도해 주세요.'
+})
 
 export class IntranetSsoService {
   private identity: IntranetSsoIdentity | null = null
+  private tokens: IntranetSsoTokens | null = null
   private persistence: IntranetSsoStatus['persistence'] = 'memory'
   private controller: AbortController | null = null
   private error: string | null = null
@@ -37,6 +56,7 @@ export class IntranetSsoService {
       openBrowser: (url: string) => Promise<void>
       session: SessionPort
       provider?: IntranetSsoProviderClient
+      clientSecret?: () => string
     }
   ) {}
 
@@ -46,7 +66,9 @@ export class IntranetSsoService {
     if (this.fingerprint !== key) {
       const initial = this.fingerprint === null
       this.cancel()
-      this.identity = initial && config.enabled ? this.ports.session.read(key) : null
+      const session = initial && config.enabled ? this.ports.session.read(key) : null
+      this.identity = session?.tokens ? session.identity : null
+      this.tokens = session?.tokens ?? null
       this.persistence = this.identity ? 'encrypted' : 'memory'
       this.fingerprint = key
       if (!initial) {
@@ -89,12 +111,13 @@ export class IntranetSsoService {
       this.controller === controller &&
       !controller.signal.aborted &&
       ssoConfigurationKey(this.ports.settings()) === key
-    void this.authorize(config, controller.signal, clientSecret)
-      .then((identity) => {
+    void this.authorize(config, controller.signal, clientSecret ?? this.ports.clientSecret?.())
+      .then((session) => {
         if (!current()) {
           return
         }
-        this.identity = identity
+        this.identity = session.identity
+        this.tokens = session.tokens ?? null
         this.controller = null
       })
       .catch((error: unknown) => {
@@ -132,16 +155,30 @@ export class IntranetSsoService {
   signOut(): IntranetSsoStatus {
     this.cancel()
     this.identity = null
+    this.tokens = null
     this.persistence = 'memory'
     this.ports.session.clear()
     return this.status()
+  }
+
+  credentials(): BadaCredentials | null {
+    const status = this.status()
+    if (
+      status.state !== 'signed-in' ||
+      !status.identity ||
+      !this.tokens ||
+      this.tokens.expiresAt <= Date.now()
+    ) {
+      return null
+    }
+    return { ...status.identity, ...this.tokens }
   }
 
   private async authorize(
     config: IntranetSsoSettings,
     signal: AbortSignal,
     clientSecret?: string
-  ): Promise<IntranetSsoIdentity> {
+  ): Promise<IntranetSsoSession> {
     const providerClient = this.ports.provider ?? new IntranetSsoProviderClient()
     providerClient.assertCredentials(config, clientSecret)
     const provider = await providerClient.discover(config, signal)
@@ -151,6 +188,7 @@ export class IntranetSsoService {
     let redirectUri = ''
     const returned = await serveHeldLoopbackCallback<string>({
       path: INTRANET_SSO_CALLBACK_PATH,
+      rejectedPage: PAGE + FAILED,
       port: intranetSsoCallbackPort(config.callbackPort),
       timeoutMs: 5 * 60_000,
       signal,
@@ -209,7 +247,7 @@ export class IntranetSsoService {
       }
     })
     try {
-      const identity = await providerClient.exchange(
+      const session = await providerClient.exchange(
         config,
         provider,
         { code: returned.value, verifier, nonce, redirectUri, clientSecret },
@@ -222,7 +260,7 @@ export class IntranetSsoService {
         throw new IntranetSsoError('cancelled')
       }
       try {
-        const persisted = this.ports.session.save(ssoConfigurationKey(config), identity)
+        const persisted = this.ports.session.save(ssoConfigurationKey(config), session)
         if (!persisted) {
           this.ports.session.clear()
         }
@@ -231,7 +269,7 @@ export class IntranetSsoService {
         throw new IntranetSsoError('storage_failed')
       }
       returned.answer(SUCCESS)
-      return identity
+      return session
     } catch (error) {
       returned.answer(FAILED)
       throw error

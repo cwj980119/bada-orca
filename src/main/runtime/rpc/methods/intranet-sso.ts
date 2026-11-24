@@ -14,6 +14,23 @@ function service(context: RpcContext) {
 
 export const INTRANET_SSO_METHODS = [
   defineMethod({
+    name: 'intranet.ssoCredentials',
+    permission: 'workspace',
+    params: IntranetSsoParams,
+    handler: (_params, context) => {
+      if (context.caller?.kind !== 'desktop' && context.caller?.kind !== 'local-cli') {
+        throw new InvalidArgumentError(
+          'BADA credentials are available only to local apps and agents.'
+        )
+      }
+      const credentials = runtimeIntranetSso(context.runtime).credentials()
+      if (!credentials) {
+        throw new InvalidArgumentError('Sign in to BADA again to obtain a valid token.')
+      }
+      return credentials
+    }
+  }),
+  defineMethod({
     name: 'intranet.ssoStatus',
     permission: 'workspace',
     params: IntranetSsoParams,

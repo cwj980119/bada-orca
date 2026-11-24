@@ -4,21 +4,34 @@
 
 ## BADA 로그인
 
-설정 → **사내 연결 → BADA 로그인**에서 발급받은 Client ID를 입력하고 연결 설정을 저장합니다. **클라이언트 시크릿 (Client Secret)** 칸에는 발급받은 시크릿 값을 직접 붙여넣고 **BADA 로그인**을 누릅니다. 환경 변수 설정이나 앱 재시작은 필요하지 않습니다. 시크릿은 이번 인증 요청에만 사용하고 설정 파일에 저장하지 않으며, 로그인 요청을 보내면 입력란을 비웁니다.
+설정 → **사내 연결 → BADA 로그인**에서 **BADA 로그인**만 누릅니다. Client ID·시크릿·서버 주소·인증 방식 입력란은 사용자에게 표시하지 않습니다. 로그인 후 이름·이메일과 유효 시각을 확인하거나 계정 연결을 해제할 수 있습니다.
+
+개발자는 `config/bada-auth.example.json`을 `config/bada-auth.local.json`으로 복사하여 `clientId`와 `clientSecret`을 입력합니다. 기본 Client ID는 `orca`입니다. 로컬 설정 파일은 Git에서 제외되며, `pnpm dev` 또는 `pnpm build:electron-vite`를 시작할 때 자동으로 읽어 메인 프로세스에 포함합니다. 값을 바꾸면 개발 서버를 다시 시작하거나 앱을 다시 빌드합니다. 빌드 환경의 `ORCA_BUILD_BADA_CLIENT_ID`·`ORCA_BUILD_BADA_CLIENT_SECRET`으로 덮어쓸 수도 있습니다. 시크릿은 렌더러와 에이전트·MCP에 전달하지 않습니다. 배포 앱에 포함된 값이므로 바이너리에서 추출할 수 있다는 한계는 있습니다.
 
 **BADA 로그인**을 누르면 사내망에서 서버 설정을 조회하고 기본 브라우저로 인증을 시작합니다. 서버 주소와 요청 권한은 미리 지정되어 있으므로 입력할 필요가 없습니다.
 
-| 등록·연결 항목  | 고정 값                                                    |
-| --------------- | ---------------------------------------------------------- |
-| Base URL        | `http://127.0.0.1:18080`                                   |
-| Redirect URI    | `http://127.0.0.1:18080/intranet/oauth/callback`           |
-| Issuer          | `http://bada.samsungsdi.com`                               |
-| Scopes          | `openid profile email`                                     |
-| 클라이언트 인증 | `client_secret_basic` (필요하면 `client_secret_post` 선택) |
+| 등록·연결 항목  | 고정 값                                          |
+| --------------- | ------------------------------------------------ |
+| Base URL        | `http://127.0.0.1:18080`                         |
+| Redirect URI    | `http://127.0.0.1:18080/intranet/oauth/callback` |
+| Issuer          | `http://bada.samsungsdi.com`                     |
+| Scopes          | `openid profile email`                           |
+| 클라이언트 인증 | `client_secret_basic`                            |
 
 Authorization Code + PKCE(S256)를 사용하고, ID Token은 JWKS 공개키로 RS256 서명과 issuer·audience·nonce·만료 시각을 검증합니다. Discovery에 PKCE 항목이 없어도 S256을 요청하며, 서버가 명시적으로 지원하지 않는다고 응답하면 실패로 표시합니다. 이름·이메일이 ID Token에 없으면 UserInfo에서 같은 `sub`의 정보를 조회합니다.
 
-사내 HTTP 허용 예외는 지정된 BADA origin에만 적용합니다. BADA Discovery의 인증·토큰·사용자 정보·JWKS 주소도 등록한 경로와 일치해야 합니다. 로그인 콜백은 이 PC의 루프백에서만 수신하며 18080 포트가 사용 중이면 다른 포트로 바꾸지 않고 오류를 표시합니다. CLI·모델·MCP 인증은 기존 설정을 사용하고, 로그인을 앱 사용의 필수 조건으로 만들지는 않습니다.
+사내 HTTP 허용 예외는 지정된 BADA origin에만 적용합니다. BADA Discovery의 인증·토큰·사용자 정보·JWKS 주소도 등록한 경로와 일치해야 합니다. 로그인 콜백은 이 PC의 루프백에서만 수신하며 18080 포트가 사용 중이면 다른 포트로 바꾸지 않고 오류를 표시합니다. 콜백 화면은 인증 처리 중·완료·실패를 카드로 표시하고 시스템의 밝은/어두운 테마를 따릅니다.
+
+### 앱·에이전트·MCP에서 계정 사용
+
+이름·이메일·사용자 ID와 Access Token·ID Token은 앱의 공통 BADA 세션에서 관리합니다. 운영체제의 보안 저장소를 사용할 수 있으면 암호화해서 보관하고 재시작 시 복원합니다. 보안 저장소를 사용할 수 없으면 앱 메모리에만 보관합니다. 이전 버전의 계정 기록에는 토큰이 없으므로 업데이트 후 한 번 다시 로그인해야 합니다.
+
+- 로컬 런타임 RPC `intranet.ssoCredentials`: 현재 계정과 유효한 토큰을 반환합니다. 일반 상태 조회에는 토큰을 포함하지 않으며, 모바일·페어링 기기에서는 자격 증명을 읽을 수 없습니다.
+- `orca auth bada --json`: 계정만 조회합니다. 사내 API에 토큰이 필요하면 `orca auth bada --token --json`을 사용합니다.
+- Claude Code·OpenCode에는 `orca-bada` MCP가 자동 연결됩니다. `bada_identity`는 이름·이메일·사용자 ID·만료 시각을, `bada_credentials`는 계정과 Access Token·ID Token을 반환합니다. 직접 MCP를 등록할 때도 `orca bada-auth-mcp`를 stdio 명령으로 사용할 수 있습니다. Claude 실행 인수에 자체 `--mcp-config`를 지정하면 그 설정을 우선합니다.
+- 새 에이전트 프로세스에는 `ORCA_BADA_NAME`, `ORCA_BADA_EMAIL`, `ORCA_BADA_SUBJECT`, `ORCA_BADA_ACCESS_TOKEN`, `ORCA_BADA_ID_TOKEN`, `ORCA_BADA_TOKEN_EXPIRES_AT`을 전달합니다. 만료 시각은 Unix epoch 밀리초입니다. 사내 연결에 등록한 HTTP MCP의 토큰 환경 변수 이름을 `ORCA_BADA_ACCESS_TOKEN`으로 지정하면 BADA Bearer 토큰을 사용할 수 있습니다.
+
+CLI·MCP의 계정 조회는 매번 현재 세션을 확인하며, 로그아웃했거나 만료된 토큰은 반환하지 않습니다. 현재는 자동 갱신 없이 재로그인을 사용합니다. 실행 중인 프로세스가 이미 복사한 환경 변수는 바뀌지 않으므로 로그인·로그아웃 후 새 에이전트 세션을 시작합니다. 원격 호스트에 전달된 환경 변수도 시작 시점의 유효한 토큰이며 원격 MCP는 만료까지만 사용할 수 있습니다. 모델 공급자의 자체 인증 설정은 유지하고, BADA 로그인을 앱 사용의 필수 조건으로 만들지는 않습니다.
 
 ## 연결 설정
 

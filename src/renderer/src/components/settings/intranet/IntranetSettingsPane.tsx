@@ -77,14 +77,7 @@ export function IntranetSettingsPane({
         }
       }}
     >
-      <IntranetSsoSettings
-        value={draft.sso}
-        savedValue={readIntranetSettings(settings).sso}
-        onChange={(sso) => {
-          setDraft((current) => ({ ...current, sso }))
-          setSaved(false)
-        }}
-      />
+      <IntranetSsoSettings />
       <SettingsGroup
         title={t('intranet.resources.mcpShortcutTitle', 'MCP server settings')}
         description={t(

@@ -6,6 +6,7 @@ export const BUNDLED_MAIN_DEPENDENCIES = new Set([
   '@xterm/addon-serialize',
   'tldts',
   'smol-toml',
+  'jsonc-parser',
   'yaml',
   'fflate',
   'mime-types',

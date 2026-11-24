@@ -166,7 +166,7 @@ export function buildSettingsNavigationMetadata(
           description:
             t?.(
               'intranet.sso.description',
-              'Sign in through BADA on the company network. Save your issued Client ID before signing in.'
+              'Sign in with BADA to connect your account to Orca and company tools.'
             ) ?? 'Configure BADA sign-in.',
           keywords: ['SSO', 'OAuth2', 'OIDC', 'login', '사내 계정', '사내 인증', '로그인'],
           targetSectionId: INTRANET_SSO_SETTINGS_TARGET_ID

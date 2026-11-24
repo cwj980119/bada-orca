@@ -7,10 +7,15 @@ export function intranetMcpServers(
   format: 'claude' | 'opencode'
 ): Record<string, McpDefinition> {
   const resources = settings.resources
-  if (!resources) {
-    return {}
-  }
   const definitions: Record<string, McpDefinition> = Object.create(null)
+  const bridgeCommand = resources?.bridgeCommand || 'orca'
+  definitions['orca-bada'] =
+    format === 'claude'
+      ? { type: 'stdio', command: bridgeCommand, args: ['bada-auth-mcp'] }
+      : { type: 'local', command: [bridgeCommand, 'bada-auth-mcp'] }
+  if (!resources) {
+    return definitions
+  }
   for (const server of resources.mcpServers.filter((entry) => entry.enabled)) {
     const env = server.tokenEnv
     const token = format === 'claude' ? `\${${env}}` : `{env:${env}}`

@@ -27,6 +27,8 @@ function pageStart(title: string): string {
     <style>
       :root {
         --background: #fff;
+        --card: #fff;
+        --muted: #f5f5f5;
         --foreground: #0a0a0a;
         --muted-foreground: #737373;
         --border: #e5e5e5;
@@ -35,6 +37,8 @@ function pageStart(title: string): string {
       @media (prefers-color-scheme: dark) {
         :root {
           --background: #0a0a0a;
+          --card: #171717;
+          --muted: #262626;
           --foreground: #fafafa;
           --muted-foreground: #a1a1a1;
           --border: rgb(255 255 255 / 0.07);
@@ -47,20 +51,24 @@ function pageStart(title: string): string {
         margin: 0;
         display: grid;
         place-items: center;
-        background: var(--background);
+        background: var(--muted);
         color: var(--foreground);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: "Geist", "Segoe UI", sans-serif;
         letter-spacing: 0.01em;
       }
       main {
         width: min(440px, calc(100% - 48px));
-        padding: 48px 0;
+        padding: 44px 32px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
         text-align: center;
       }
       .mark {
-        width: 44px;
-        height: 44px;
-        margin: 0 auto 20px;
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 24px;
         display: grid;
         place-items: center;
         border: 1px solid var(--border);
@@ -74,7 +82,7 @@ function pageStart(title: string): string {
       .mark svg { width: 22px; height: 22px; }
       h1 {
         margin: 0;
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 650;
         line-height: 1.2;
         letter-spacing: -0.02em;
@@ -82,9 +90,10 @@ function pageStart(title: string): string {
       p {
         margin: 12px 0 0;
         color: var(--muted-foreground);
-        font-size: 15px;
+        font-size: 14px;
         line-height: 1.5;
       }
+      .brand { margin: 0 0 28px; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; color: var(--muted-foreground); }
     </style>
   </head>
   <body>
@@ -95,13 +104,15 @@ function pageMain(
   heading: string,
   line: string | null,
   mark: 'success' | 'failed' | 'waiting' | 'neutral',
-  className = ''
+  className = '',
+  brand?: string
 ): string {
   const icon =
     mark === 'waiting' || mark === 'neutral'
       ? ''
       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${mark === 'success' ? CHECK_MARK : CROSS_MARK}</svg>`
   return `    <main${className ? ` class="${className}"` : ''}>
+${brand ? `      <div class="brand">${escapeHtml(brand)}</div>\n` : ''}
       <div class="mark ${mark}" aria-hidden="true">${icon}</div>
       <h1>${escapeHtml(heading)}</h1>
 ${line === null ? '' : `      <p>${escapeHtml(line)}</p>\n`}    </main>
@@ -123,18 +134,23 @@ export function orcaCallbackSuccessPage(
  * A page sent in two parts: the neutral first part as soon as the browser is back, and the outcome
  * once the work it waits on is done, which hides the first part (no script runs on these pages).
  */
-export const orcaCallbackReceivedPage = (): string =>
-  `${pageStart('Orca')}${pageMain('Finishing sign-in…', null, 'waiting', 'received')}`
+export const orcaCallbackReceivedPage = (options?: {
+  heading: string
+  line: string
+  brand: string
+}): string =>
+  `${pageStart(options?.brand ?? 'Orca')}${pageMain(options?.heading ?? 'Finishing sign-in…', options?.line ?? null, 'waiting', 'received', options?.brand)}`
 
 /** `ok: null` is no outcome yet, e.g. the tab stopped waiting while Orca still finishes. */
 export function orcaCallbackOutcome(outcome: {
   ok: boolean | null
   heading: string
   line: string
+  brand?: string
 }): string {
   const mark = outcome.ok === null ? 'neutral' : outcome.ok ? 'success' : 'failed'
   return `    <style>.received { display: none; }</style>
-${pageMain(outcome.heading, outcome.line, mark)}${PAGE_END}`
+${pageMain(outcome.heading, outcome.line, mark, '', outcome.brand)}${PAGE_END}`
 }
 
 export type OrcaCloudCallbackOutcome =

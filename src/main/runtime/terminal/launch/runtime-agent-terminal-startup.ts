@@ -1,4 +1,5 @@
 import type { RuntimeAccountController } from '../../agent-session/environment/runtime-account-controller'
+import { withBadaAgentEnvironment } from '../../../intranet-sso/runtime-intranet-sso'
 import { applyRemoteViewerLaunchEnv } from './remote-viewer-launch-env'
 import type { SessionOptionValue } from '../../../../shared/native-chat/input/native-chat-session-options'
 import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent'
@@ -234,7 +235,7 @@ async function buildRuntimeAgentTerminalStartupOptions(
   }
 
   // Account routing rides over the plan's own env, as a local launch's auth patch does.
-  const env = opts.accountEnv ? { ...startupPlan.env, ...opts.accountEnv } : startupPlan.env
+  const env = withBadaAgentEnvironment({ ...startupPlan.env, ...opts.accountEnv })
   return {
     ...opts,
     command: startupPlan.launchCommand,

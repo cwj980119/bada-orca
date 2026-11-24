@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import {
   defaultIntranetSsoSettings,
-  type IntranetSsoIdentity,
+  type IntranetSsoSession,
   type IntranetSsoSettings
 } from '../../shared/intranet/intranet-sso'
 import { IntranetSsoService } from './intranet-sso-service'
@@ -19,6 +19,7 @@ export async function createSsoFixture(
     occupiedCallbackPort?: boolean
     provider?: IntranetSsoProviderClient
     authMethod?: 'client_secret_basic' | 'client_secret_post'
+    clientSecret?: () => string
     omitPkceMetadata?: boolean
     userInfoOnly?: boolean
     profileSubject?: string
@@ -29,8 +30,8 @@ export async function createSsoFixture(
   let authorization: URL | null = null
   let pkceVerified = false
   let callback: Promise<string> | null = null
-  const identities: IntranetSsoIdentity[] = []
-  let retained: IntranetSsoIdentity | null = null
+  const identities: IntranetSsoSession[] = []
+  let retained: IntranetSsoSession | null = null
   let base = ''
   const server = createServer((request, response) => {
     void (async () => {
@@ -156,6 +157,7 @@ export async function createSsoFixture(
   const service = new IntranetSsoService({
     settings: () => settings,
     provider: options.provider,
+    clientSecret: options.clientSecret,
     session: {
       read: () => retained,
       save: (_key, identity) => {

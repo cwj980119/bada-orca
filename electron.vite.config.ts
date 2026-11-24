@@ -26,6 +26,7 @@ import {
 import { reactPluginOptions } from './config/build-plugins/react-compiler'
 import { BUNDLED_MAIN_DEPENDENCIES } from './config/build-plugins/bundled-main-dependencies'
 import { resolveBuildSourceCommit } from './config/scripts/build-identity/build-source-commit.mjs'
+import { badaAuthBuildDefines } from './config/build-plugins/bada-auth-build-config'
 
 const darkBuildSwitches: {
   darkBuildDefines: () => Record<string, string>
@@ -204,6 +205,7 @@ export const electronViteConfig: UserConfig = {
     },
     define: {
       ORCA_BUILD_COMMIT: ORCA_BUILD_COMMIT_LITERAL,
+      ...badaAuthBuildDefines(process.cwd()),
       ...DARK_BUILD_DEFINES
     },
     // @xterm/headless declares exports:null; point Vite directly at its published CJS main to permit inlining.

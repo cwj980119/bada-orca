@@ -1316,6 +1316,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'intranet.sshClaudeStart': SshClaudeDiagnosticStart,
   'intranet.sshClaudeStatus': SshClaudeDiagnosticHandle,
   'intranet.ssoCancel': IntranetSsoParams,
+  'intranet.ssoCredentials': IntranetSsoParams,
   'intranet.ssoSignIn': IntranetSsoSignInParams,
   'intranet.ssoSignOut': IntranetSsoParams,
   'intranet.ssoStatus': IntranetSsoParams,

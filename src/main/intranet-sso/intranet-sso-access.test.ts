@@ -12,10 +12,23 @@ it.each([
 ])('keeps sign-in and account data out of non-desktop callers: %j', (caller) => {
   const runtime = new OrcaRuntimeService()
   for (const method of INTRANET_SSO_METHODS) {
+    if (method.name === 'intranet.ssoCredentials') {
+      continue
+    }
     expect(() => method.handler({}, { runtime, caller })).toThrow(
       'Company sign-in is controlled from this desktop app.'
     )
   }
+})
+
+it('refuses BADA token reads from paired devices', () => {
+  const method = INTRANET_SSO_METHODS.find((entry) => entry.name === 'intranet.ssoCredentials')!
+  expect(() =>
+    method.handler(
+      {},
+      { runtime: new OrcaRuntimeService(), caller: { kind: 'paired-device', deviceId: 'remote' } }
+    )
+  ).toThrow('BADA credentials are available only to local apps and agents.')
 })
 
 it('allows agent model changes without allowing the agent to replace the identity provider', () => {

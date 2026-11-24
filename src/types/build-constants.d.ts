@@ -6,5 +6,7 @@
 
 // Full commit the build was made from (`git rev-parse HEAD`); official skill installs pin to it.
 declare const ORCA_BUILD_COMMIT: string
+declare const BADA_CLIENT_ID: string
+declare const BADA_CLIENT_SECRET: string
 
 // ORCA_LAYOUT_OWNER is declared and read in one place: src/shared/workspace-layout/layout-owner-switch.ts.

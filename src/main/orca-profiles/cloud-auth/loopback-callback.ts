@@ -64,6 +64,7 @@ function listen(server: Server, port: number): Promise<void> {
 }
 
 type LoopbackCallbackOptions<T> = {
+  rejectedPage?: string
   path: string
   port?: number
   timeoutMs: number
@@ -210,7 +211,12 @@ export function serveLoopbackCallback<T>(
           return
         }
         if (hit.kind === 'reject') {
-          answer(response, 400, hit.message)
+          answer(
+            response,
+            400,
+            options.rejectedPage ?? hit.message,
+            options.rejectedPage ? ORCA_CLOUD_CALLBACK_RESPONSE_HEADERS : {}
+          )
           rejectFlow(hit.error)
           return
         }

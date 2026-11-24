@@ -128,6 +128,18 @@ export type IntranetSsoIdentity = {
   expiresAt: number
 }
 
+export const IntranetSsoTokensSchema = z.object({
+  accessToken: z.string().min(1).max(65536),
+  idToken: z.string().min(1).max(65536).nullable(),
+  expiresAt: z.number().finite().positive()
+})
+export type IntranetSsoTokens = z.infer<typeof IntranetSsoTokensSchema>
+export type IntranetSsoSession = {
+  identity: IntranetSsoIdentity
+  tokens?: IntranetSsoTokens
+}
+export type BadaCredentials = IntranetSsoIdentity & IntranetSsoTokens
+
 export type IntranetSsoStatus = {
   state: 'unconfigured' | 'signed-out' | 'authorizing' | 'signed-in' | 'expired' | 'error'
   identity: IntranetSsoIdentity | null

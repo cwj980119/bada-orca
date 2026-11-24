@@ -51,18 +51,15 @@ describe('internal model launch configuration', () => {
     expect(config.provider.internal).toBeUndefined()
     expect(config.enabled_providers).toBeUndefined()
   })
-  it('keeps inherited OpenCode file configuration active when no endpoint override is saved', () => {
+  it('adds BADA to JSONC inline settings while retaining the configured model and file path', () => {
     const env = intranetAgentEnvironment('opencode', undefined, {
-      OPENCODE_CONFIG: '/company/opencode.json'
+      OPENCODE_CONFIG: '/company/opencode.json',
+      OPENCODE_CONFIG_CONTENT: '{ // company policy\n "model": "company/coder", }'
     })
     expect(env.OPENCODE_CONFIG).toBe('/company/opencode.json')
-    expect(env.OPENCODE_CONFIG_CONTENT).toBeUndefined()
-    expect(env.OPENCODE_DISABLE_MODELS_FETCH).toBe('true')
-    const inline = '{ // company policy\n "model": "company/coder", }'
-    expect(
-      intranetAgentEnvironment('opencode', undefined, { OPENCODE_CONFIG_CONTENT: inline })
-        .OPENCODE_CONFIG_CONTENT
-    ).toBe(inline)
+    const config = JSON.parse(env.OPENCODE_CONFIG_CONTENT)
+    expect(config.model).toBe('company/coder')
+    expect(config.mcp['orca-bada'].command).toEqual(['orca', 'bada-auth-mcp'])
   })
 
   it('uses the v2 provider schema and an existing credential environment variable', () => {

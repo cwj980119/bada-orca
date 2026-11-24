@@ -4,6 +4,18 @@ import { CLI_GLOBAL_FLAGS as GLOBAL_FLAGS } from '../../shared/cli/cli-argument-
 // Separate from `orca account` (agent accounts): this is the host's own Orca account.
 export const AUTH_COMMAND_SPECS: CommandSpec[] = [
   {
+    path: ['auth', 'bada'],
+    summary: 'Read the current BADA identity or a token for a company service',
+    usage: 'orca auth bada [--token] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'token'],
+    booleanFlags: ['token'],
+    notes: [
+      'Reads the signed-in desktop session on this host. Expired or signed-out sessions are refused.',
+      'Returns account information by default. --token includes the access token and ID token.'
+    ],
+    examples: ['orca auth bada --json', 'orca auth bada --token --json']
+  },
+  {
     path: ['auth', 'login'],
     summary: "Sign this host's Orca in to your Orca account",
     usage: 'orca auth login [--org <id|name>] [--switch] [--json]',

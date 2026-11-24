@@ -1,6 +1,6 @@
 import { createLocalJWKSet, jwtVerify } from 'jose'
 import { z } from 'zod'
-import type { IntranetSsoIdentity, IntranetSsoSettings } from '../../shared/intranet/intranet-sso'
+import type { IntranetSsoSession, IntranetSsoSettings } from '../../shared/intranet/intranet-sso'
 import {
   BADA_SSO_ISSUER,
   defaultIntranetSsoSettings,
@@ -155,7 +155,7 @@ export class IntranetSsoProviderClient {
       clientSecret?: string
     },
     signal: AbortSignal
-  ): Promise<IntranetSsoIdentity> {
+  ): Promise<IntranetSsoSession> {
     const clientSecret = input.clientSecret ?? this.readSecret(config.clientSecretEnv)
     this.assertCredentials(config, clientSecret)
     const headers: Record<string, string> = {
@@ -286,12 +286,22 @@ export class IntranetSsoProviderClient {
       throw new IntranetSsoError('invalid_identity')
     }
     const text = (value: unknown) => (typeof value === 'string' ? value.slice(0, 256) : null)
+    const tokenExpiresAt = token.data.expires_in
+      ? Math.min(expiresAt, Date.now() + token.data.expires_in * 1000)
+      : expiresAt
     return {
-      issuer: provider.issuer,
-      subject,
-      name: text(profile.name),
-      email: text(profile.email),
-      expiresAt
+      identity: {
+        issuer: provider.issuer,
+        subject,
+        name: text(profile.name),
+        email: text(profile.email),
+        expiresAt: tokenExpiresAt
+      },
+      tokens: {
+        accessToken: token.data.access_token,
+        idToken: token.data.id_token ?? null,
+        expiresAt: tokenExpiresAt
+      }
     }
   }
 }
