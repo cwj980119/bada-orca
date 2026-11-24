@@ -1,7 +1,11 @@
 import { createLocalJWKSet, jwtVerify } from 'jose'
 import { z } from 'zod'
 import type { IntranetSsoIdentity, IntranetSsoSettings } from '../../shared/intranet/intranet-sso'
-import { isIntranetSsoEndpoint } from '../../shared/intranet/intranet-sso'
+import {
+  BADA_SSO_ISSUER,
+  defaultIntranetSsoSettings,
+  isIntranetSsoEndpoint
+} from '../../shared/intranet/intranet-sso'
 import { getMainHttpClient } from '../network/http-client'
 import { assertIntranetRequest } from '../network/intranet-network'
 import { readFetchResponseTextWithinLimit } from '../../shared/network/fetch-response-body'
@@ -15,7 +19,8 @@ const Metadata = z.object({
   token_endpoint: z.string(),
   jwks_uri: z.string(),
   userinfo_endpoint: z.string().optional(),
-  code_challenge_methods_supported: z.array(z.string()).optional()
+  code_challenge_methods_supported: z.array(z.string()).optional(),
+  token_endpoint_auth_methods_supported: z.array(z.string()).optional()
 })
 export type IntranetSsoProvider = {
   issuer: string
@@ -27,8 +32,15 @@ export type IntranetSsoProvider = {
 
 export class IntranetSsoProviderClient {
   constructor(
-    private readonly fetch: IntranetSsoFetch = (url, init) => getMainHttpClient().fetch(url, init)
+    private readonly fetch: IntranetSsoFetch = (url, init) => getMainHttpClient().fetch(url, init),
+    private readonly readSecret: (name: string) => string | undefined = (name) => process.env[name]
   ) {}
+
+  assertCredentials(config: IntranetSsoSettings): void {
+    if (config.tokenEndpointAuthMethod !== 'none' && !this.readSecret(config.clientSecretEnv)) {
+      throw new IntranetSsoError('missing_client_secret')
+    }
+  }
 
   assertEndpoint(url: string): void {
     if (!url || !isIntranetSsoEndpoint(url)) {
@@ -95,6 +107,23 @@ export class IntranetSsoProviderClient {
       throw new IntranetSsoError('invalid_metadata')
     }
     const metadata = parsed.data
+    if (
+      metadata.token_endpoint_auth_methods_supported &&
+      !metadata.token_endpoint_auth_methods_supported.includes(config.tokenEndpointAuthMethod)
+    ) {
+      throw new IntranetSsoError('invalid_metadata')
+    }
+    if (issuer === BADA_SSO_ISSUER) {
+      const bada = defaultIntranetSsoSettings()
+      if (
+        metadata.authorization_endpoint !== bada.authorizationUrl ||
+        metadata.token_endpoint !== bada.tokenUrl ||
+        (metadata.userinfo_endpoint && metadata.userinfo_endpoint !== bada.userInfoUrl) ||
+        metadata.jwks_uri !== `${BADA_SSO_ISSUER}/.well-known/jwks.json`
+      ) {
+        throw new IntranetSsoError('invalid_metadata')
+      }
+    }
     for (const endpoint of [
       metadata.authorization_endpoint,
       metadata.token_endpoint,
@@ -118,21 +147,34 @@ export class IntranetSsoProviderClient {
     input: { code: string; verifier: string; redirectUri: string; nonce: string },
     signal: AbortSignal
   ): Promise<IntranetSsoIdentity> {
+    this.assertCredentials(config)
+    const headers: Record<string, string> = {
+      'content-type': 'application/x-www-form-urlencoded',
+      accept: 'application/json'
+    }
+    const body = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: input.code,
+      code_verifier: input.verifier,
+      redirect_uri: input.redirectUri
+    })
+    if (config.tokenEndpointAuthMethod === 'client_secret_basic') {
+      const encode = (value: string) => new URLSearchParams({ value }).toString().slice(6)
+      headers.authorization = `Basic ${Buffer.from(
+        `${encode(config.clientId)}:${encode(this.readSecret(config.clientSecretEnv)!)}`
+      ).toString('base64')}`
+    } else {
+      body.set('client_id', config.clientId)
+      if (config.tokenEndpointAuthMethod === 'client_secret_post') {
+        body.set('client_secret', this.readSecret(config.clientSecretEnv)!)
+      }
+    }
     const raw = await this.json(
       provider.tokenUrl,
       {
         method: 'POST',
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded',
-          accept: 'application/json'
-        },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          client_id: config.clientId,
-          code: input.code,
-          code_verifier: input.verifier,
-          redirect_uri: input.redirectUri
-        }).toString()
+        headers,
+        body: body.toString()
       },
       signal
     )
@@ -161,17 +203,10 @@ export class IntranetSsoProviderClient {
         const { payload } = await jwtVerify(token.data.id_token, createLocalJWKSet(jwks), {
           issuer: provider.issuer,
           audience: config.clientId,
-          algorithms: [
-            'RS256',
-            'RS384',
-            'RS512',
-            'PS256',
-            'PS384',
-            'PS512',
-            'ES256',
-            'ES384',
-            'EdDSA'
-          ],
+          algorithms:
+            config.issuer === BADA_SSO_ISSUER
+              ? ['RS256']
+              : ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'EdDSA'],
           requiredClaims: ['sub', 'exp', 'iat', 'nonce'],
           clockTolerance: 30
         })
@@ -193,6 +228,26 @@ export class IntranetSsoProviderClient {
         expiresAt = Math.min(payload.exp! * 1000, Date.now() + 24 * 60 * 60_000)
       } catch {
         throw new IntranetSsoError('invalid_token')
+      }
+      if (provider.userInfoUrl && (!profile.name || !profile.email)) {
+        const userInfo = await this.json(
+          provider.userInfoUrl,
+          {
+            headers: {
+              authorization: `Bearer ${token.data.access_token}`,
+              accept: 'application/json'
+            }
+          },
+          signal
+        )
+        if (userInfo.sub !== profile.sub) {
+          throw new IntranetSsoError('invalid_identity')
+        }
+        profile = {
+          ...profile,
+          name: profile.name ?? userInfo.name,
+          email: profile.email ?? userInfo.email
+        }
       }
     } else {
       profile = await this.json(

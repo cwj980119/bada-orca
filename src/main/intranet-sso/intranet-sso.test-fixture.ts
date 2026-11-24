@@ -18,6 +18,10 @@ export async function createSsoFixture(
     strayState?: boolean
     occupiedCallbackPort?: boolean
     provider?: IntranetSsoProviderClient
+    authMethod?: 'client_secret_basic' | 'client_secret_post'
+    omitPkceMetadata?: boolean
+    userInfoOnly?: boolean
+    profileSubject?: string
   } = {}
 ) {
   const { publicKey, privateKey } = await generateKeyPair('RS256')
@@ -38,7 +42,9 @@ export async function createSsoFixture(
             authorization_endpoint: `${base}/authorize`,
             token_endpoint: `${base}/token`,
             jwks_uri: `${base}/jwks`,
-            code_challenge_methods_supported: ['S256']
+            ...(options.userInfoOnly ? { userinfo_endpoint: `${base}/profile` } : {}),
+            ...(options.omitPkceMetadata ? {} : { code_challenge_methods_supported: ['S256'] }),
+            token_endpoint_auth_methods_supported: [options.authMethod ?? 'none']
           })
         )
       } else if (request.url === '/jwks') {
@@ -50,7 +56,12 @@ export async function createSsoFixture(
           return
         }
         response.end(
-          JSON.stringify({ uid: 'employee-7', name: 'Alice', email: 'alice@company.internal' })
+          JSON.stringify({
+            sub: options.profileSubject ?? 'employee-7',
+            uid: 'employee-7',
+            name: 'Alice',
+            email: 'alice@company.internal'
+          })
         )
       } else if (request.url === '/token') {
         let text = ''
@@ -58,6 +69,21 @@ export async function createSsoFixture(
           text += String(part)
         }
         const form = new URLSearchParams(text)
+        if (
+          (options.authMethod === 'client_secret_basic' &&
+            (!request.headers.authorization?.startsWith('Basic ') ||
+              Buffer.from(request.headers.authorization.slice(6), 'base64').toString() !==
+                'desktop-test-client:test%3Asecret+%2B%2F' ||
+              form.has('client_secret'))) ||
+          (options.authMethod === 'client_secret_post' &&
+            (request.headers.authorization !== undefined ||
+              form.get('client_id') !== 'desktop-test-client' ||
+              form.get('client_secret') !== 'test:secret +/'))
+        ) {
+          response.writeHead(401)
+          response.end('{}')
+          return
+        }
         pkceVerified =
           createHash('sha256')
             .update(form.get('code_verifier') ?? '')
@@ -71,8 +97,7 @@ export async function createSsoFixture(
         }
         const idToken = await new SignJWT({
           nonce: options.nonce ?? authorization!.searchParams.get('nonce'),
-          name: 'Alice',
-          email: 'alice@company.internal'
+          ...(options.userInfoOnly ? {} : { name: 'Alice', email: 'alice@company.internal' })
         })
           .setProtectedHeader({ alg: 'RS256' })
           .setIssuer(base)
@@ -120,6 +145,8 @@ export async function createSsoFixture(
     callbackPort: callbackAddress.port,
     issuer: base,
     clientId: 'desktop-test-client',
+    clientSecretEnv: options.authMethod ? 'TEST_BADA_SECRET' : '',
+    tokenEndpointAuthMethod: options.authMethod ?? 'none',
     protocol: options.protocol ?? 'oidc',
     authorizationUrl: `${base}/authorize`,
     tokenUrl: `${base}/token`,

@@ -9,8 +9,6 @@ import {
 const configured = {
   ...defaultIntranetSsoSettings(),
   enabled: true,
-  label: '사내 인증',
-  issuer: 'https://sso.company.internal',
   clientId: 'desktop-client'
 }
 function setup(status: IntranetSsoStatus): void {
@@ -67,24 +65,12 @@ export const connected = defineFixture({
     </div>
   )
 })
-export const oauth2 = defineFixture({
+export const missingSecret = defineFixture({
   width: 720,
-  setup: () => setup(signedOut),
+  setup: () => setup({ ...signedOut, state: 'error', error: 'missing_client_secret' }),
   render: () => (
     <div className="settings-view-shell bg-background p-8">
-      <IntranetSsoSettings
-        value={{
-          ...configured,
-          protocol: 'oauth2',
-          authorizationUrl: 'https://sso.company.internal/authorize',
-          tokenUrl: 'https://sso.company.internal/token',
-          userInfoUrl: 'https://sso.company.internal/userinfo',
-          subjectClaim: 'uid',
-          scopes: 'profile'
-        }}
-        savedValue={configured}
-        onChange={() => {}}
-      />
+      <IntranetSsoSettings value={configured} savedValue={configured} onChange={() => {}} />
     </div>
   )
 })

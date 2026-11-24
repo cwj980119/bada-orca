@@ -162,12 +162,12 @@ export function buildSettingsNavigationMetadata(
           targetSectionId: INTRANET_MCP_SETTINGS_TARGET_ID
         },
         {
-          title: t?.('intranet.sso.title', 'Company account · SSO') ?? 'Company account · SSO',
+          title: t?.('intranet.sso.title', 'BADA sign-in') ?? 'BADA sign-in',
           description:
             t?.(
               'intranet.sso.description',
-              'Connect this app to your company identity provider. Configure the server later; no Orca account is needed.'
-            ) ?? 'Configure company sign-in.',
+              'Sign in through BADA on the company network. Save your issued Client ID before signing in.'
+            ) ?? 'Configure BADA sign-in.',
           keywords: ['SSO', 'OAuth2', 'OIDC', 'login', '사내 계정', '사내 인증', '로그인'],
           targetSectionId: INTRANET_SSO_SETTINGS_TARGET_ID
         }

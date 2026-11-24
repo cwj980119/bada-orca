@@ -693,6 +693,25 @@
           "detectedServers_one": "{{detected}} detected · {{count}} server",
           "detectedServers_other": "{{detected}} detected · {{count}} servers"
         },
+        "OpenAiTranscriptionKeyDialog": {
+          "07ed3e512e": "Audio is sent to OpenAI only when an OpenAI speech model is selected.",
+          "2f797018f0": "API key configured",
+          "bce1b6d18a": "Save key",
+          "be6c3f2eba": "Clear key",
+          "bf1ff9c891": "OpenAI transcription",
+          "c3380e4ca5": "sk-...",
+          "c3dfb3840e": "API key",
+          "d246b2bdb3": "Local runtime keys are stored in ~/.orca using Electron encrypted storage when available."
+        },
+        "OpenAiTranscriptionSettingsRow": {
+          "3b0ab3fc0b": "Connected",
+          "85c589cd61": "Add API key",
+          "893790e13b": "Add an OpenAI API key before selecting cloud speech-to-text models.",
+          "a622bc3b37": "Replace key",
+          "ae2df8f511": "Disconnect OpenAI API key",
+          "b59b9b2b51": "API key configured for cloud speech-to-text models.",
+          "ff28e99b54": "OpenAI transcription"
+        },
         "OrchestrationPane": {
           "coordinatorApprovalsKeywordApprove": "approve",
           "coordinatorApprovalsKeywordPermission": "permission",
@@ -760,6 +779,7 @@
           "084d8fac5b": "Privacy & Security",
           "23931df7e8": "Remote Hosts",
           "23c6874fdf": "AI Capabilities",
+          "5063bb47a5": "Voice",
           "8bd117d669": "Interface",
           "9abb9be3bc": "Set Up",
           "e1578cd4bc": "Workflows"
@@ -767,6 +787,40 @@
         "SshPane": {
           "syncedServerPlural": "Synced {{count}} servers",
           "syncedServerSingular": "Synced {{count}} server"
+        },
+        "VoiceMicrophoneSetting": {
+          "accessHint": "Allow microphone access to list input devices.",
+          "allowAccess": "Allow access",
+          "label": "Microphone",
+          "noMicrophoneFound": "No microphone was found. Connect one, then try again.",
+          "openFailed": "Could not open the microphone.",
+          "openFailedDetail": "Could not open the microphone. {{value0}}",
+          "openedSystemSettings": "Opened macOS Privacy & Security. Grant microphone access, then try again.",
+          "permissionDenied": "Microphone access is blocked. Grant it in your system settings, then try again.",
+          "systemDefault": "System default",
+          "unavailable": "unavailable"
+        },
+        "VoicePane": {
+          "118b3c2dee": "Toggle",
+          "174da92062": "Hold",
+          "1eac933202": "Opened macOS Privacy & Security. Enable dictation again after granting access.",
+          "37aba8bb63": "OpenAI API key cleared",
+          "506df81ba6": "OpenAI API key saved",
+          "61a16c8141": "Extracting...",
+          "62d2a84d31": "Failed to clear OpenAI API key",
+          "68de13f72c": "Failed to delete model.",
+          "6fa734ed95": "Delete {{value0}}",
+          "8572bbb537": "Failed to save OpenAI API key",
+          "91980ce124": "{{value0}} MB",
+          "ad5d036ecc": "Could not request microphone permission. Voice dictation was not enabled.",
+          "ba4a900d1d": "Dictation Mode",
+          "c5ea32143e": "Speech model",
+          "cd9fe37556": "Microphone permission granted",
+          "cfde55c7b0": "Failed to download model.",
+          "dictationModeAuto": "Auto",
+          "f9a9cf6928": "Microphone permission is required before enabling voice dictation.",
+          "openAiKeyName": "Your OpenAI transcription key",
+          "speechGpuLabel": "Use GPU"
         },
         "WarpThemeImportModal": {
           "found_theme": "Found {{value0}} themes",
@@ -908,6 +962,64 @@
           "imported_other": "Imported {{value0}} themes",
           "over_limit_one": "Importing these themes would exceed the {{value0}} custom terminal theme limit. Deselect {{value1}} new theme and try again.",
           "over_limit_other": "Importing these themes would exceed the {{value0}} custom terminal theme limit. Deselect {{value1}} new themes and try again."
+        },
+        "voice": {
+          "pane": {
+            "search": {
+              "04c25a6fb0": "openai",
+              "064a9bd94a": "hold",
+              "080202facb": "model",
+              "089d31a45b": "dictation",
+              "10d45a9fce": "stt",
+              "2d206de105": "api key",
+              "322d457a0d": "transcription",
+              "3d8b853963": "speech",
+              "56defcd6c3": "Select a local or cloud speech-to-text model to use for dictation.",
+              "698376a38d": "Master toggle for voice dictation features.",
+              "6fa48bcd41": "toggle",
+              "748b33e531": "Toggle or hold-to-talk dictation behavior.",
+              "7640ed9848": "voice",
+              "7f5a2416a6": "Speech model",
+              "931b1a9e53": "push to talk",
+              "9d83747eae": "Dictation language",
+              "b9dee49cd7": "download",
+              "c7a7eaa0da": "Remove filler words",
+              "cleanupDescription": "Fix punctuation, numbers and spoken corrections with your agent before text lands.",
+              "cleanupKeyword": "correction word",
+              "cleanupScratchKeyword": "scratch that",
+              "d0c230c061": "Dictation mode",
+              "d86f5600da": "mode",
+              "dcc7846641": "Configure the OpenAI API key used for cloud speech-to-text models.",
+              "dictationLanguageDescription": "Tell the speech model which language you speak.",
+              "dictationLanguageKeyword": "language",
+              "dictationTitle": "Dictation",
+              "e360027a65": "microphone",
+              "f6e0dfa61c": "cloud",
+              "ffaa3efe7c": "OpenAI transcription",
+              "fillerWordsDescription": "Drop “um”, “uh” and similar sounds from dictated text.",
+              "fillerWordsKeyword": "filler words",
+              "gpuKeyword": "graphics card",
+              "keepLoadedTitle": "Keep model loaded",
+              "micAirpods": "airpods",
+              "micDefault": "system default",
+              "micDevice": "device",
+              "micInput": "input",
+              "microphoneDescription": "Choose which input device voice dictation uses.",
+              "microphoneTitle": "Microphone",
+              "modelMemoryKeyword": "memory",
+              "modelUnloadDescription": "Choose when the on-device speech model is unloaded from memory.",
+              "modelUnloadKeyword": "unload",
+              "shortcutDescription": "The key that starts dictation.",
+              "shortcutKeyword": "keyboard",
+              "shortcutTitle": "Shortcut",
+              "silenceStopDescription": "Choose how long dictation keeps listening when you stop talking.",
+              "silenceStopKeyword": "silence",
+              "silenceStopTitle": "Stop after silence",
+              "vocabularyDescription": "Names and code terms dictation spells your way, for you or for one repo.",
+              "vocabularyKeyword": "dictionary",
+              "vocabularyTitle": "Vocabulary"
+            }
+          }
         }
       },
       "sidebar": {
@@ -1355,6 +1467,10 @@
         "nativeDropTempCopyFailed": "Orca couldn't copy {{count}} dropped files.",
         "nativeDropTempCopyFailed_one": "Orca couldn't copy {{count}} dropped file.",
         "nativeDropTempCopyFailed_other": "Orca couldn't copy {{count}} dropped files."
+      },
+      "useSettingsNavigationMetadata": {
+        "6a50cdcd7c": "Voice",
+        "8ac3de82f5": "Local speech-to-text dictation with on-device models."
       }
     },
     "lib": {
@@ -1679,7 +1795,9 @@
       }
     },
     "new": {
-      "fromTemplate": "Start from a template"
+      "fromTemplate": "Start from a template",
+      "useChatDefaults": "Use chat defaults",
+      "usingChatDefault": "Using your chat default. Background runs use your Agents setting."
     },
     "options": {
       "activeFilters_one": "Bot options ({{count}} filter active)",
@@ -2160,7 +2278,9 @@
         "paused": "{{bot}} is paused."
       },
       "composer": {
-        "placeholder": "Ask anything, @ to mention files, / for commands"
+        "placeholder": "Ask anything, @ to mention files, / for commands",
+        "startDictation": "Start dictation",
+        "stopDictation": "Stop dictation"
       },
       "composerErrors": {
         "commandTakesNoArguments": "Use /{{name}} without arguments.",
@@ -2655,6 +2775,203 @@
       "workers_other": "{{count}} workers"
     },
     "settings": {
+      "voice": {
+        "advanced": {
+          "title": "Advanced"
+        },
+        "cleanup": {
+          "agent": "Agent and model",
+          "agentDescription": "Runs on this computer. A small, fast model keeps the wait short.",
+          "anAgent": "an AI agent",
+          "consent": {
+            "cancel": "Cancel",
+            "confirm": "Turn on",
+            "description": "After each dictation, Orca sends the text to {{agent}} to tidy it before it lands.",
+            "goesToAgent": "Wherever {{agent}} on this computer is set up to send prompts.",
+            "goesToKnown": "{{company}}, through {{agent}} on this computer. Counts toward your {{plan}} plan.",
+            "goesToLabel": "Goes to",
+            "notSent": "Audio, files, or what’s on screen.",
+            "notSentLabel": "Not sent",
+            "sent": "The dictated text, your vocabulary and your instructions.",
+            "sentLabel": "Sent",
+            "title": "Turn on AI cleanup?",
+            "wait": "Text lands a few seconds later.",
+            "waitLabel": "Wait"
+          },
+          "correctionWord": "Correction word",
+          "correctionWordDescription": "Say it to take back what you just said: “at four, {{word}}, at five”.",
+          "correctionWordOff": "None",
+          "description": "Fixes punctuation, numbers and spoken corrections before text lands. Sends the text to {{agent}}, never audio.",
+          "instructions": {
+            "builtIn": "Built-in: fix punctuation, numbers and corrections. Keep my wording.",
+            "cancel": "Cancel",
+            "custom": "Your own instructions.",
+            "edit": "Edit",
+            "emptyHint": "Leave empty for the built-in ones.",
+            "label": "Instructions",
+            "reset": "Reset",
+            "save": "Save"
+          },
+          "label": "AI cleanup",
+          "noAgent": "No agent can run AI cleanup. Pick one below.",
+          "saveFailed": "Could not save AI cleanup.",
+          "title": "Cleanup"
+        },
+        "dictation": {
+          "downloading": "Works once {{model}} finishes downloading.",
+          "label": "Dictation",
+          "needsUpdate": "Update {{model}} below to keep dictating.",
+          "noModel": "Download a speech model below to start. It runs on this computer, so your audio stays here.",
+          "off": "Turn on to dictate with {{shortcut}} in any pane.",
+          "ready": "Press {{shortcut}} in any pane."
+        },
+        "dictationLanguage": {
+          "alwaysUses": "The language you speak. {{model}} always uses {{language}}.",
+          "auto": "Auto-detect",
+          "detectsItself": "The language you speak. {{model}} detects it by itself.",
+          "rated": "The language you speak. Quality is rated for it.",
+          "unsupported": "{{model}} doesn't support {{language}}, so it detects the language itself."
+        },
+        "fillerWords": {
+          "0134406785": "Remove filler words",
+          "short": "Drops “um” and “uh”."
+        },
+        "gpu": {
+          "description": "Turn off if dictation freezes your computer."
+        },
+        "input": {
+          "changeShortcut": "Change",
+          "description": "Follows your system setting unless you pick one.",
+          "missing": "{{microphone}} isn’t connected. Using the system default until it’s back.",
+          "shortcut": "Shortcut",
+          "title": "Input"
+        },
+        "keepLoaded": {
+          "always": "Always",
+          "description": "Dictation starts at once while it’s loaded.",
+          "label": "Keep model loaded",
+          "never": "Never"
+        },
+        "language": {
+          "title": "Language"
+        },
+        "micTest": {
+          "afterCleanup": "After cleanup · {{agent}}, {{model}} · {{seconds}} s",
+          "cleaningUp": "Cleaning up…",
+          "cleanupFailed": "Cleanup failed: {{reason}}",
+          "cleanupOff": "AI cleanup is off.",
+          "cleanupTimedOut": "Cleanup took too long.",
+          "heardFailed": "{{model}} couldn’t transcribe the recording.",
+          "heardLabel": "{{model}} heard",
+          "heardNothing": "No words. Try speaking louder.",
+          "hint": "Say a sentence the way you normally dictate.",
+          "levelGood": "Level looks good",
+          "levelQuiet": "Very quiet. Check the microphone or move closer.",
+          "listening": "{{model}} is listening too…",
+          "playAgain": "Play again",
+          "playing": "Playing back {{elapsed}}",
+          "recording": "Recording {{elapsed}} of {{limit}}",
+          "skip": "Skip",
+          "stop": "Stop",
+          "test": "Test",
+          "testAgain": "Test again",
+          "tryCleanup": "Try cleanup"
+        },
+        "mode": {
+          "auto": "Tap {{shortcut}} to start and stop, or hold it while you talk.",
+          "hold": "Talk while you hold {{shortcut}}.",
+          "label": "Mode",
+          "toggle": "Press {{shortcut}} to start, and again to stop."
+        },
+        "modelUnload": {
+          "cloud": "Cloud models run on the provider’s servers, so nothing stays loaded here."
+        },
+        "models": {
+          "about": {
+            "nemotron": "{{languages}} languages, including Arabic, Hindi and Japanese.",
+            "parakeetUnifiedEn": "English only. Words appear as you speak.",
+            "parakeetV2": "Fast. English only, and the most accurate at it.",
+            "parakeetV3": "Fast. {{languages}} European languages.",
+            "senseVoice": "Fast. For Chinese, Japanese and Korean.",
+            "whisperTiny": "Smallest download. Good for trying dictation out.",
+            "whisperTurbo": "Most languages, about 100. Slow without a GPU."
+          },
+          "cloud": "Cloud",
+          "columnModel": "Model",
+          "columnQuality": "Quality",
+          "columnSize": "Size",
+          "delete": "Delete",
+          "download": "Download",
+          "downloadingProgress": "Downloading, {{done}} of {{total}} MB ({{percent}}%)",
+          "inUse": "In use",
+          "local": "On this computer",
+          "needsUpdate": "Needs a one-time download for the faster engine.",
+          "recommended": "Recommended",
+          "retired": "No longer offered. Delete it to free up space.",
+          "sendsToCompatible": "Sends your audio to the service you set up.",
+          "sendsToOpenAi": "Sends your audio to OpenAI.",
+          "setUpCloud": "Set up",
+          "use": "Use",
+          "where": "Where models run"
+        },
+        "openAiCompatible": {
+          "apiKey": "API Key",
+          "baseUrl": "Base URL",
+          "baseUrlPlaceholder": "https://api.groq.com/openai/v1",
+          "description": "Audio goes to this service only while the OpenAI-compatible model is selected. It works with Groq, Mistral, OpenAI and local servers.",
+          "edit": "Edit",
+          "keyOptional": "Optional for local servers",
+          "keySaved": "Saved key kept",
+          "model": "Model",
+          "modelPlaceholder": "whisper-large-v3-turbo",
+          "removeLabel": "Remove OpenAI-compatible provider",
+          "rowConfigured": "Base URL and model saved for the OpenAI-compatible model.",
+          "rowMissing": "Add a base URL and model before selecting the OpenAI-compatible model.",
+          "save": "Save",
+          "setUp": "Set up",
+          "title": "OpenAI-compatible provider",
+          "updateFailed": "Could not update the provider"
+        },
+        "pageDescription": "Talk instead of typing in any pane.",
+        "quality": {
+          "excellent": "Excellent",
+          "fair": "Fair",
+          "good": "Good",
+          "poor": "Poor",
+          "unmeasured": "Not measured",
+          "unsupported": "Doesn’t support your language",
+          "veryGood": "Very good"
+        },
+        "setup": {
+          "savedMicrophone": "Your microphone"
+        },
+        "silenceStop": {
+          "label": "Stop after silence",
+          "off": "Off",
+          "short": "Ends dictation when you stop talking."
+        },
+        "vocabulary": {
+          "add": "Add",
+          "description": "Names and code terms to spell your way. Add what the model mishears it as, if it keeps getting it wrong.",
+          "heardAs": "Heard as (optional)",
+          "heardAsChip": "← {{heardAs}}",
+          "heardAsLabel": "Heard as",
+          "personal": "Personal · {{total}}",
+          "personalScope": "Used in every repo.",
+          "remove": "Remove {{term}}",
+          "repo": "{{repo}} · {{total}}",
+          "repoNameHint": "Use the repo name as a hint",
+          "repoNameHintDescription": "Helps recognize the repo's name.",
+          "repoSaveFailed": "Couldn't save the repo's terms. The host running this repo may need an Orca update.",
+          "repoScope": "Only used while you dictate in {{repo}}.",
+          "scope": "Terms for",
+          "term": "Word or phrase",
+          "title": "Vocabulary"
+        },
+        "words": {
+          "title": "Words"
+        }
+      },
       "workspaceCleanup": {
         "activity": {
           "chatsDeletedCount_one": "1 chat deleted",
@@ -2837,7 +3154,49 @@
   },
   "intranet": {
     "opencodeDescription": "Uses the installed OpenCode CLI. Leave these fields empty to keep its existing internal provider and credentials.",
-    "opencodePair": "Enter both the OpenCode server URL and model ID, or leave both empty to use your existing CLI configuration."
+    "opencodePair": "Enter both the OpenCode server URL and model ID, or leave both empty to use your existing CLI configuration.",
+    "sshClaude": {
+      "start": "Test connection",
+      "testing": "Testing…"
+    },
+    "sso": {
+      "authorizationUrl": "Authorization endpoint",
+      "callbackPort": "Callback port",
+      "enabled": "Enable BADA sign-in",
+      "errors": {
+        "callback_failed": "The login callback failed. Retry.",
+        "callback_unavailable": "Could not open the configured callback port. Close another login window or the program using this port, then retry.",
+        "cancelled": "BADA sign-in was cancelled.",
+        "denied": "BADA sign-in was declined.",
+        "insecure_endpoint": "This authentication endpoint is not allowed. Check the BADA address and server settings.",
+        "invalid_identity": "The authenticated profile does not contain a valid user ID.",
+        "invalid_issuer": "The callback issuer does not match the configured provider.",
+        "invalid_metadata": "The issuer metadata is invalid or does not support PKCE S256.",
+        "invalid_token": "The authentication response could not be verified. Check the issuer, client ID and server clock.",
+        "missing_client_secret": "The client secret environment variable is empty. Set the issued secret and restart Orca.",
+        "request_failed": "Could not reach the company authentication server. Check the endpoint, certificate and allowed hosts.",
+        "sign_in_failed": "BADA sign-in failed. Check the saved settings and retry.",
+        "storage_failed": "Could not update the protected account record. Retry or check local file permissions.",
+        "timeout": "BADA sign-in timed out. Retry.",
+        "unavailable": "Could not read BADA sign-in status. Retry in the updated desktop app.",
+        "unconfigured": "Save your BADA Client ID before signing in."
+      },
+      "label": "Provider display name",
+      "protocol": "Authentication protocol",
+      "publicClient": "Uses a native/public client with Authorization Code + PKCE (S256). No client secret is embedded. Providers requiring a client secret need a company backend adapter.",
+      "states": {
+        "authorizing": "Waiting for BADA sign-in",
+        "error": "Sign-in failed",
+        "expired": "Sign-in expired",
+        "loading": "Loading",
+        "signed-in": "Signed in",
+        "signed-out": "Signed out",
+        "unconfigured": "Not configured"
+      },
+      "subjectClaim": "User ID field",
+      "tokenUrl": "Token endpoint",
+      "userInfoUrl": "User profile endpoint"
+    }
   },
   "jira": {
     "workspace": {
@@ -2865,6 +3224,50 @@
     "toggleFullScreen": "Toggle Full Screen",
     "unhide": "Show All",
     "zoom": "Zoom"
+  },
+  "orchestrationMonitor": {
+    "delivery": {
+      "audit": "Audit record",
+      "delivered": "Delivered",
+      "pending": "Awaiting delivery",
+      "read": "Receipt acknowledged"
+    },
+    "labels": {
+      "answered": "Answered",
+      "blocked": "Blocked",
+      "bot": "Bot",
+      "circuit_broken": "Stopped after failures",
+      "closed": "Closed",
+      "completed": "Completed",
+      "connected": "Connected",
+      "decision_gate": "Decision",
+      "dispatch": "Dispatch",
+      "dispatched": "In progress",
+      "dropped": "Dropped",
+      "error": "Unavailable",
+      "escalation": "Escalation",
+      "external": "External CLI",
+      "failed": "Failed",
+      "handoff": "Handoff",
+      "heartbeat": "Heartbeat",
+      "loading": "Loading",
+      "merge_ready": "Merge ready",
+      "offline": "Offline",
+      "paused": "Paused",
+      "pending": "Pending",
+      "posted": "Reply posted",
+      "question": "Question",
+      "ready": "Ready",
+      "registered": "Registered",
+      "session": "Chat",
+      "status": "Status",
+      "terminal": "Terminal",
+      "unanswered": "Ended without reply",
+      "unknown": "Unknown",
+      "unsupported": "Update required",
+      "worker": "Worker",
+      "worker_done": "Worker report"
+    }
   },
   "pet": {
     "defaultLabels": {
@@ -3306,6 +3709,10 @@
         "windowsBatchUnsafeArguments": "{{label}} runs through a Windows batch script that cannot take the multi-line prompt as an argument. Point Settings at the agent's executable, or use a custom command without {prompt} so Orca sends the prompt on stdin."
       }
     }
+  },
+  "speechModelUpdate": {
+    "cancel": "Cancel",
+    "update": "Update"
   },
   "stats": {
     "usageBreakdown": {

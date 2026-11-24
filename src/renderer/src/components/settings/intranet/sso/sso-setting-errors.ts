@@ -8,6 +8,7 @@ export function ssoSettingError(
   const labels: Record<string, string> = {
     issuer: 'Issuer URL',
     clientId: 'Client ID',
+    clientSecretEnv: 'Client secret environment variable',
     scopes: 'Scopes',
     authorizationUrl: 'Authorization endpoint',
     tokenUrl: 'Token endpoint',
@@ -15,10 +16,13 @@ export function ssoSettingError(
     subjectClaim: 'User ID field',
     callbackPort: 'Callback port'
   }
-  const field = t(
-    `intranet.sso.${key}`,
-    labels[key] ?? t('intranet.sso.title', 'Company account · SSO')
-  )
+  const field = t(`intranet.sso.${key}`, labels[key] ?? t('intranet.sso.title', 'BADA sign-in'))
+  if (key === 'clientSecretEnv') {
+    return t(
+      'intranet.sso.invalidSecretEnv',
+      'Enter an environment variable name, such as ORCA_BADA_CLIENT_SECRET.'
+    )
+  }
   if (key === 'callbackPort') {
     return t('intranet.sso.invalidPort', 'Use a port between 1024 and 65535.')
   }
@@ -29,13 +33,13 @@ export function ssoSettingError(
     )
   }
   if (issue.message === 'Required for company sign-in.') {
-    return t('intranet.sso.requiredField', 'Enter {{field}} before enabling company sign-in.', {
+    return t('intranet.sso.requiredField', 'Enter {{field}} before enabling BADA sign-in.', {
       field
     })
   }
   return t(
     'intranet.sso.invalidField',
-    'Check {{field}}. Server URLs must use HTTPS without credentials, a query, or a fragment.',
+    'Check {{field}}. Server URLs must use HTTPS or the configured BADA address without credentials, a query, or a fragment.',
     { field }
   )
 }

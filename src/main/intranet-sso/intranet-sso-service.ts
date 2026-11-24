@@ -18,11 +18,11 @@ type SessionPort = {
 }
 
 const PAGE =
-  '<!doctype html><meta charset="utf-8"><title>Company sign-in</title><p>사내 로그인 처리 중 / Completing company sign-in…</p>'
+  '<!doctype html><meta charset="utf-8"><title>BADA 로그인</title><p>BADA 로그인 처리 중 / Completing BADA sign-in…</p>'
 const SUCCESS =
-  '<p>사내 로그인이 완료되었습니다. 앱으로 돌아가세요. / Sign-in complete. Return to the app.</p>'
+  '<p>BADA 로그인이 완료되었습니다. 앱으로 돌아가세요. / Sign-in complete. Return to the app.</p>'
 const FAILED =
-  '<p>사내 로그인을 완료하지 못했습니다. 앱에서 다시 시도하세요. / Sign-in failed. Retry in the app.</p>'
+  '<p>BADA 로그인을 완료하지 못했습니다. 앱에서 다시 시도하세요. / Sign-in failed. Retry in the app.</p>'
 
 export class IntranetSsoService {
   private identity: IntranetSsoIdentity | null = null
@@ -142,6 +142,7 @@ export class IntranetSsoService {
     signal: AbortSignal
   ): Promise<IntranetSsoIdentity> {
     const providerClient = this.ports.provider ?? new IntranetSsoProviderClient()
+    providerClient.assertCredentials(config)
     const provider = await providerClient.discover(config, signal)
     const verifier = randomBytes(32).toString('base64url')
     const state = randomBytes(32).toString('base64url')

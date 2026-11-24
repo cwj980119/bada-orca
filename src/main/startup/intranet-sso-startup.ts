@@ -1,6 +1,6 @@
 import { app, shell } from 'electron'
 import { join } from 'node:path'
-import { defaultIntranetSsoSettings } from '../../shared/intranet/intranet-sso'
+import { badaSsoSettings } from '../../shared/intranet/intranet-sso'
 import { IntranetSsoService } from '../intranet-sso/intranet-sso-service'
 import { IntranetSsoSessionFile } from '../intranet-sso/intranet-sso-session'
 import { registerRuntimeIntranetSso } from '../intranet-sso/runtime-intranet-sso'
@@ -10,7 +10,7 @@ import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 export function installDesktopIntranetSso(runtime: OrcaRuntimeService): void {
   const store = runtime.requireStore()
   const service = new IntranetSsoService({
-    settings: () => store.getSettings().intranet?.sso ?? defaultIntranetSsoSettings(),
+    settings: () => badaSsoSettings(store.getSettings().intranet?.sso),
     openBrowser: (url) => shell.openExternal(url),
     session: new IntranetSsoSessionFile(
       join(getCanonicalUserDataPath(), 'intranet-sso-session.enc')

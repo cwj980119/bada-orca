@@ -1,6 +1,8 @@
 import { z } from 'zod'
 
 export const DEFAULT_INTRANET_SSO_CALLBACK_PORT = 18080
+export const BADA_SSO_ISSUER = 'http://bada.samsungsdi.com'
+export const BADA_SSO_CLIENT_SECRET_ENV = 'ORCA_BADA_CLIENT_SECRET'
 
 export function intranetSsoCallbackPort(port: number): number {
   return port || DEFAULT_INTRANET_SSO_CALLBACK_PORT
@@ -18,7 +20,9 @@ export function isIntranetSsoEndpoint(value: string): boolean {
       !url.search &&
       !url.hash &&
       (url.protocol === 'https:' ||
-        (url.protocol === 'http:' && ['127.0.0.1', '[::1]', 'localhost'].includes(url.hostname)))
+        (url.protocol === 'http:' &&
+          (url.origin === BADA_SSO_ISSUER ||
+            ['127.0.0.1', '[::1]', 'localhost'].includes(url.hostname))))
     )
   } catch {
     return false
@@ -38,6 +42,15 @@ export const IntranetSsoSettingsSchema = z
     label: z.string().trim().max(80),
     issuer: endpoint,
     clientId: z.string().trim().max(512),
+    clientSecretEnv: z
+      .string()
+      .trim()
+      .max(128)
+      .regex(/^$|^[A-Za-z_][A-Za-z0-9_]*$/)
+      .default(''),
+    tokenEndpointAuthMethod: z
+      .enum(['none', 'client_secret_basic', 'client_secret_post'])
+      .default('none'),
     scopes: z.string().trim().max(1024),
     authorizationUrl: endpoint,
     tokenUrl: endpoint,
@@ -80,15 +93,30 @@ export function defaultIntranetSsoSettings(): IntranetSsoSettings {
   return {
     enabled: false,
     protocol: 'oidc',
-    label: '',
-    issuer: '',
+    label: 'BADA',
+    issuer: BADA_SSO_ISSUER,
     clientId: '',
+    clientSecretEnv: BADA_SSO_CLIENT_SECRET_ENV,
+    tokenEndpointAuthMethod: 'client_secret_basic',
     scopes: 'openid profile email',
-    authorizationUrl: '',
-    tokenUrl: '',
-    userInfoUrl: '',
+    authorizationUrl: `${BADA_SSO_ISSUER}/oauth2/authorize`,
+    tokenUrl: `${BADA_SSO_ISSUER}/oauth2/token`,
+    userInfoUrl: `${BADA_SSO_ISSUER}/oauth2/userinfo`,
     subjectClaim: 'sub',
     callbackPort: DEFAULT_INTRANET_SSO_CALLBACK_PORT
+  }
+}
+
+export function badaSsoSettings(value?: IntranetSsoSettings): IntranetSsoSettings {
+  return {
+    ...defaultIntranetSsoSettings(),
+    enabled: Boolean(value?.clientId.trim()),
+    clientId: value?.clientId ?? '',
+    clientSecretEnv: value?.clientSecretEnv || BADA_SSO_CLIENT_SECRET_ENV,
+    tokenEndpointAuthMethod:
+      value?.tokenEndpointAuthMethod === 'client_secret_post'
+        ? 'client_secret_post'
+        : 'client_secret_basic'
   }
 }
 
