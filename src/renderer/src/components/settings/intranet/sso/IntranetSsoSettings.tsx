@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { LogIn, LogOut, Loader2 } from 'lucide-react'
 import { useIntlLocale, useTranslate } from '@/i18n/use-translate'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,6 @@ import { SettingsRow } from '../../form-controls/SettingsFormControls'
 import {
   badaSsoSettings,
   BADA_SSO_ISSUER,
-  BADA_SSO_CLIENT_SECRET_ENV,
   DEFAULT_INTRANET_SSO_CALLBACK_PORT,
   INTRANET_SSO_CALLBACK_PATH,
   type IntranetSsoSettings as SsoSettings
@@ -36,6 +35,7 @@ export function IntranetSsoSettings({
   const t = useTranslate()
   const locale = useIntlLocale()
   const id = useId()
+  const [clientSecret, setClientSecret] = useState('')
   const config = badaSsoSettings(value)
   const saved = badaSsoSettings(savedValue)
   const dirty = JSON.stringify(config) !== JSON.stringify(saved)
@@ -53,6 +53,11 @@ export function IntranetSsoSettings({
     error: 'Sign-in failed'
   }
   const problem = auth.status?.error
+  const signIn = () => {
+    const secret = clientSecret
+    setClientSecret('')
+    void auth.run('intranet.ssoSignIn', { clientSecret: secret })
+  }
   return (
     <SettingsGroup
       id={INTRANET_SSO_SETTINGS_TARGET_ID}
@@ -82,18 +87,19 @@ export function IntranetSsoSettings({
         }
       />
       <SettingsRow
-        label={t('intranet.sso.clientSecretEnv', 'Client secret environment variable')}
-        labelId={`${id}-clientSecretEnv-label`}
+        label={t('intranet.sso.clientSecret', 'Client Secret')}
+        labelId={`${id}-clientSecret-label`}
         description={t(
           'intranet.sso.secretHelp',
-          'Set the issued secret in this environment variable on the PC running Orca, then restart the app. Enter the variable name here.'
+          'Paste the Client Secret issued by BADA, then sign in. It is used for this sign-in only and is not saved.'
         )}
         control={
           <Input
-            aria-labelledby={`${id}-clientSecretEnv-label`}
-            value={config.clientSecretEnv}
-            onChange={(event) => edit('clientSecretEnv', event.target.value)}
-            placeholder={BADA_SSO_CLIENT_SECRET_ENV}
+            type="password"
+            aria-labelledby={`${id}-clientSecret-label`}
+            value={clientSecret}
+            onChange={(event) => setClientSecret(event.target.value)}
+            maxLength={8192}
             className="w-80 max-w-full"
             autoComplete="off"
             spellCheck={false}
@@ -191,8 +197,8 @@ export function IntranetSsoSettings({
             <Button
               type="button"
               size="sm"
-              disabled={!saved.enabled || dirty || auth.busy}
-              onClick={() => void auth.run('intranet.ssoSignIn')}
+              disabled={!saved.enabled || dirty || auth.busy || !clientSecret}
+              onClick={signIn}
             >
               {auth.busy ? (
                 <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />

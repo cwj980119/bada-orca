@@ -38,6 +38,16 @@ export const unconfigured = defineFixture({
 export const oidc = defineFixture({
   width: 720,
   setup: () => setup(signedOut),
+  interact: (frame) => {
+    const input = frame.querySelector<HTMLInputElement>('input[type="password"]')
+    if (input) {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(
+        input,
+        'test-only-secret'
+      )
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    }
+  },
   render: () => (
     <div className="settings-view-shell bg-background p-8">
       <IntranetSsoSettings value={configured} savedValue={configured} onChange={() => {}} />

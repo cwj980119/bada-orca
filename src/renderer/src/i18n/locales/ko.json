@@ -53,10 +53,11 @@
         "cancelled": "BADA 로그인을 취소했습니다.",
         "callback_unavailable": "설정된 콜백 포트를 열지 못했습니다. 다른 로그인 창이나 해당 포트를 사용하는 프로그램을 닫고 다시 시도하세요.",
         "callback_failed": "로그인 콜백 처리에 실패했습니다. 다시 시도하세요.",
-        "missing_client_secret": "클라이언트 시크릿 환경 변수가 비어 있습니다. 설정한 변수에 발급받은 시크릿을 넣고 앱을 다시 시작하세요."
+        "missing_client_secret": "BADA에서 발급받은 Client Secret 값을 입력한 뒤 로그인하세요."
       },
+      "clientSecret": "클라이언트 시크릿 (Client Secret)",
       "clientSecretEnv": "클라이언트 시크릿 환경 변수 이름",
-      "secretHelp": "Orca를 실행하는 PC의 이 환경 변수에 발급받은 시크릿을 설정한 뒤 앱을 다시 시작하세요. 여기에는 변수 이름을 입력합니다.",
+      "secretHelp": "BADA에서 발급받은 Client Secret 값을 직접 붙여넣고 로그인하세요. 이번 로그인에만 사용하며 저장하지 않습니다.",
       "tokenEndpointAuthMethod": "클라이언트 인증 방식",
       "clientSecretBasic": "client_secret_basic",
       "clientSecretPost": "client_secret_post",

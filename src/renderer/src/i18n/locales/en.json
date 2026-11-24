@@ -53,10 +53,11 @@
         "cancelled": "BADA sign-in was cancelled.",
         "callback_unavailable": "Could not open the configured callback port. Close another login window or the program using this port, then retry.",
         "callback_failed": "The login callback failed. Retry.",
-        "missing_client_secret": "The client secret environment variable is empty. Set the issued secret and restart Orca."
+        "missing_client_secret": "Enter the Client Secret issued by BADA before signing in."
       },
+      "clientSecret": "Client Secret",
       "clientSecretEnv": "Client secret environment variable",
-      "secretHelp": "Set the issued secret in this environment variable on the PC running Orca, then restart the app. Enter the variable name here.",
+      "secretHelp": "Paste the Client Secret issued by BADA, then sign in. It is used for this sign-in only and is not saved.",
       "tokenEndpointAuthMethod": "Client authentication",
       "clientSecretBasic": "client_secret_basic",
       "clientSecretPost": "client_secret_post",

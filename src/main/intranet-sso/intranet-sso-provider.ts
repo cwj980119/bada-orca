@@ -36,8 +36,11 @@ export class IntranetSsoProviderClient {
     private readonly readSecret: (name: string) => string | undefined = (name) => process.env[name]
   ) {}
 
-  assertCredentials(config: IntranetSsoSettings): void {
-    if (config.tokenEndpointAuthMethod !== 'none' && !this.readSecret(config.clientSecretEnv)) {
+  assertCredentials(config: IntranetSsoSettings, clientSecret?: string): void {
+    if (
+      config.tokenEndpointAuthMethod !== 'none' &&
+      !(clientSecret ?? this.readSecret(config.clientSecretEnv))
+    ) {
       throw new IntranetSsoError('missing_client_secret')
     }
   }
@@ -144,10 +147,17 @@ export class IntranetSsoProviderClient {
   async exchange(
     config: IntranetSsoSettings,
     provider: IntranetSsoProvider,
-    input: { code: string; verifier: string; redirectUri: string; nonce: string },
+    input: {
+      code: string
+      verifier: string
+      redirectUri: string
+      nonce: string
+      clientSecret?: string
+    },
     signal: AbortSignal
   ): Promise<IntranetSsoIdentity> {
-    this.assertCredentials(config)
+    const clientSecret = input.clientSecret ?? this.readSecret(config.clientSecretEnv)
+    this.assertCredentials(config, clientSecret)
     const headers: Record<string, string> = {
       'content-type': 'application/x-www-form-urlencoded',
       accept: 'application/json'
@@ -161,12 +171,12 @@ export class IntranetSsoProviderClient {
     if (config.tokenEndpointAuthMethod === 'client_secret_basic') {
       const encode = (value: string) => new URLSearchParams({ value }).toString().slice(6)
       headers.authorization = `Basic ${Buffer.from(
-        `${encode(config.clientId)}:${encode(this.readSecret(config.clientSecretEnv)!)}`
+        `${encode(config.clientId)}:${encode(clientSecret!)}`
       ).toString('base64')}`
     } else {
       body.set('client_id', config.clientId)
       if (config.tokenEndpointAuthMethod === 'client_secret_post') {
-        body.set('client_secret', this.readSecret(config.clientSecretEnv)!)
+        body.set('client_secret', clientSecret!)
       }
     }
     const raw = await this.json(

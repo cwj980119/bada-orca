@@ -3162,6 +3162,7 @@
     "sso": {
       "authorizationUrl": "Authorization endpoint",
       "callbackPort": "Callback port",
+      "clientSecretEnv": "Client secret environment variable",
       "enabled": "Enable BADA sign-in",
       "errors": {
         "callback_failed": "The login callback failed. Retry.",
@@ -3173,7 +3174,7 @@
         "invalid_issuer": "The callback issuer does not match the configured provider.",
         "invalid_metadata": "The issuer metadata is invalid or does not support PKCE S256.",
         "invalid_token": "The authentication response could not be verified. Check the issuer, client ID and server clock.",
-        "missing_client_secret": "The client secret environment variable is empty. Set the issued secret and restart Orca.",
+        "missing_client_secret": "Enter the Client Secret issued by BADA before signing in.",
         "request_failed": "Could not reach the company authentication server. Check the endpoint, certificate and allowed hosts.",
         "sign_in_failed": "BADA sign-in failed. Check the saved settings and retry.",
         "storage_failed": "Could not update the protected account record. Retry or check local file permissions.",

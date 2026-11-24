@@ -75,7 +75,7 @@ export class IntranetSsoService {
     }
   }
 
-  start(): IntranetSsoStatus {
+  start(clientSecret?: string): IntranetSsoStatus {
     this.status()
     const config = IntranetSsoSettingsSchema.parse(this.ports.settings())
     if (!config.enabled) {
@@ -89,7 +89,7 @@ export class IntranetSsoService {
       this.controller === controller &&
       !controller.signal.aborted &&
       ssoConfigurationKey(this.ports.settings()) === key
-    void this.authorize(config, controller.signal)
+    void this.authorize(config, controller.signal, clientSecret)
       .then((identity) => {
         if (!current()) {
           return
@@ -139,10 +139,11 @@ export class IntranetSsoService {
 
   private async authorize(
     config: IntranetSsoSettings,
-    signal: AbortSignal
+    signal: AbortSignal,
+    clientSecret?: string
   ): Promise<IntranetSsoIdentity> {
     const providerClient = this.ports.provider ?? new IntranetSsoProviderClient()
-    providerClient.assertCredentials(config)
+    providerClient.assertCredentials(config, clientSecret)
     const provider = await providerClient.discover(config, signal)
     const verifier = randomBytes(32).toString('base64url')
     const state = randomBytes(32).toString('base64url')
@@ -211,7 +212,7 @@ export class IntranetSsoService {
       const identity = await providerClient.exchange(
         config,
         provider,
-        { code: returned.value, verifier, nonce, redirectUri },
+        { code: returned.value, verifier, nonce, redirectUri, clientSecret },
         signal
       )
       if (

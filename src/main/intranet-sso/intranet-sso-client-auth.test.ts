@@ -8,16 +8,16 @@ afterEach(async () => {
 })
 
 it.each(['client_secret_basic', 'client_secret_post'] as const)(
-  'signs in using %s when discovery omits PKCE metadata and claims require UserInfo',
+  'signs in with the directly entered secret using %s without an environment variable',
   async (authMethod) => {
     const fixture = await createSsoFixture({
       authMethod,
       omitPkceMetadata: true,
       userInfoOnly: true,
-      provider: new IntranetSsoProviderClient(undefined, () => 'test:secret +/')
+      provider: new IntranetSsoProviderClient(undefined, () => undefined)
     })
     fixtures.push(fixture)
-    fixture.service.start()
+    fixture.service.start('test:secret +/')
     await vi.waitFor(() => expect(fixture.service.status().state).toBe('signed-in'))
     expect(fixture.service.status().identity).toMatchObject({
       subject: 'employee-7',

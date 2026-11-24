@@ -1,4 +1,7 @@
-import { IntranetSsoParams } from '../../../../shared/intranet/intranet-sso'
+import {
+  IntranetSsoParams,
+  IntranetSsoSignInParams
+} from '../../../../shared/intranet/intranet-sso'
 import { runtimeIntranetSso } from '../../../intranet-sso/runtime-intranet-sso'
 import { defineMethod, InvalidArgumentError, type RpcContext } from '../core'
 
@@ -19,8 +22,8 @@ export const INTRANET_SSO_METHODS = [
   defineMethod({
     name: 'intranet.ssoSignIn',
     permission: 'workspace',
-    params: IntranetSsoParams,
-    handler: (_params, context) => service(context).start()
+    params: IntranetSsoSignInParams,
+    handler: (params, context) => service(context).start(params.clientSecret)
   }),
   defineMethod({
     name: 'intranet.ssoSignOut',

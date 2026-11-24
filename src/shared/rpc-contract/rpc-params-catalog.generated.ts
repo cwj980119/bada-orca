@@ -37,7 +37,7 @@ import {
   DesktopBrowserBridgeResultChunkParams,
   DesktopBrowserBridgeResultParams
 } from '../browser/client-hosting/desktop-browser-bridge-protocol'
-import { IntranetSsoParams } from '../intranet/intranet-sso'
+import { IntranetSsoParams, IntranetSsoSignInParams } from '../intranet/intranet-sso'
 import {
   SshClaudeDiagnosticHandle,
   SshClaudeDiagnosticStart
@@ -1316,7 +1316,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'intranet.sshClaudeStart': SshClaudeDiagnosticStart,
   'intranet.sshClaudeStatus': SshClaudeDiagnosticHandle,
   'intranet.ssoCancel': IntranetSsoParams,
-  'intranet.ssoSignIn': IntranetSsoParams,
+  'intranet.ssoSignIn': IntranetSsoSignInParams,
   'intranet.ssoSignOut': IntranetSsoParams,
   'intranet.ssoStatus': IntranetSsoParams,
   'layout.apply': LayoutApplyParams,

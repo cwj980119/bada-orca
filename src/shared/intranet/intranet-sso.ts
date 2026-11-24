@@ -136,4 +136,5 @@ export type IntranetSsoStatus = {
 }
 
 export const IntranetSsoParams = z.object({})
+export const IntranetSsoSignInParams = z.object({ clientSecret: z.string().max(8192).optional() })
 export const INTRANET_SSO_CALLBACK_PATH = '/intranet/oauth/callback'

@@ -8,16 +8,13 @@ export function useIntranetSso(revision: string) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
   const live = useRef(false)
-  const run = useCallback(async (method: string) => {
+  const run = useCallback(async (method: string, params: { clientSecret?: string } = {}) => {
     setBusy(true)
     setError(false)
     try {
-      const next = await callRuntimeRpc<IntranetSsoStatus>(
-        LOCAL,
-        method,
-        {},
-        { suppressFeatureInteraction: true }
-      )
+      const next = await callRuntimeRpc<IntranetSsoStatus>(LOCAL, method, params, {
+        suppressFeatureInteraction: true
+      })
       if (live.current) {
         setStatus(next)
       }
