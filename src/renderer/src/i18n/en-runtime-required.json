@@ -3246,6 +3246,17 @@
       "pending": "Awaiting delivery",
       "read": "Receipt acknowledged"
     },
+    "executionStates": {
+      "answer": "Awaiting input",
+      "approval": "Awaiting approval",
+      "failed": "Needs recovery",
+      "idle": "Ready",
+      "paused": "Paused",
+      "sleeping": "At rest",
+      "starting": "Starting CLI",
+      "unavailable": "Not observed",
+      "working": "Working"
+    },
     "labels": {
       "answered": "Answered",
       "blocked": "Blocked",
@@ -3258,7 +3269,6 @@
       "dispatch": "Dispatch",
       "dispatched": "In progress",
       "dropped": "Dropped",
-      "error": "Unavailable",
       "escalation": "Escalation",
       "external": "External CLI",
       "failed": "Failed",
@@ -3281,7 +3291,37 @@
       "unsupported": "Update required",
       "worker": "Worker",
       "worker_done": "Worker report"
-    }
+    },
+    "progressReasons": {
+      "answer": "The receiving chat is waiting for input. Answer its question to continue.",
+      "approval": "The receiving chat is waiting for approval. Open it to review the prompt.",
+      "awaiting_response": "The request was received. A reply has not been recorded yet.",
+      "busy": "The receiving bot has work in progress. This request stays in its queue.",
+      "cancelled": "This request was dropped before it was handled.",
+      "completed": "A reply to this request was recorded.",
+      "paused": "The receiving bot is paused. Resume it from bot settings before retrying.",
+      "previous_failure": "An earlier failure was recorded in the receiving chat. Inspect its state before continuing.",
+      "queued": "Waiting for the receiving bot to take this request.",
+      "run_stopped": "This work has stopped or reached its execution deadline. New delivery is blocked.",
+      "starting": "Starting the receiving CLI. The request is retained until it is ready.",
+      "startup_failed": "The receiving CLI did not become ready. Check the connection or retry.",
+      "unanswered": "The request ended without a reply. Review the conversation before assigning it again.",
+      "unavailable": "The receiving session could not be confirmed. Check the host connection.",
+      "uncertain": "Delivery could not be confirmed. Automatic retry is withheld to avoid duplicate work."
+    },
+    "progressStages": {
+      "awaiting_response": "Awaiting reply",
+      "blocked": "Waiting for action",
+      "cancelled": "Delivery ended",
+      "completed": "Reply recorded",
+      "failed": "Needs recovery",
+      "processing": "Received",
+      "queued": "Queued",
+      "starting": "Starting CLI",
+      "uncertain": "Delivery unconfirmed"
+    },
+    "recentMessages": "Recent messages",
+    "showAll": "Show all"
   },
   "pet": {
     "defaultLabels": {

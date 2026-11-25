@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import { runIsClosed } from '../runtime/orchestration/db/runs/run-controls'
 import type { BotGroupCreate, BotGroupSend, BotGroupUpdate } from '../../shared/bots/bot-group'
 import type {
   StructuredMailboxPointerHost,
@@ -75,6 +76,13 @@ export function markBotGroupRoomUnread(runtime: OrcaRuntimeService, sessionId: s
  *  theirs; other sessions pass through. */
 export function botMailOwner(runtime: OrcaRuntimeService): StructuredMailOwner {
   return {
+    mailAllowed: (messageId) => {
+      const db = runtime.getOrchestrationDb()
+      return (
+        !db.getBotRequest(messageId) ||
+        !runIsClosed(db, db.getMessageById(messageId)?.run_id ?? null)
+      )
+    },
     mailHeld: (sessionId) => pausedBotChatHoldsMail(runtime, sessionId),
     beforeSend: (input) =>
       isBotGroupMemberSession(input.sessionId) && runtimeBotGroups(runtime).reserveMailTurn(input),

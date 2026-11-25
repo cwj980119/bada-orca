@@ -285,7 +285,7 @@ export async function createQueuedMessageTestRig(
   async function dispose(): Promise<void> {
     await host.flushAllStreamedEvents()
     await closeTestJournalHostDatabase(root)
-    await rm(root, { recursive: true, force: true })
+    await rm(root, { recursive: true, force: true, maxRetries: 3 })
   }
 
   return {

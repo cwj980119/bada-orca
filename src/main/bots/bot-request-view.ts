@@ -213,11 +213,14 @@ export function botAnswerView(record: BotRequestRecord, posted: boolean): Record
 /** Why a request came back with no answer, for the sender to act on. */
 export function botRequestUnansweredText(
   record: BotRequestRecord,
-  why: 'ended' | 'failed' | 'failed-continues' | 'paused' | 'deleted' | 'new-chat',
+  why: 'ended' | 'failed' | 'failed-continues' | 'paused' | 'deleted' | 'new-chat' | 'cancelled',
   /** On a failure: why, as its chat words it; absent when the host recorded no reason. */
   failure?: string
 ): string {
   const bot = record.toBotName
+  if (why === 'cancelled') {
+    return `Your owner cancelled this ${record.purpose} before ${bot} received it. Stop waiting for its answer; do not resend it unless your owner asks.`
+  }
   const failedTurn = `${bot}'s turn failed${failure ? `: ${failure}` : ' with an error.'}`
   // Orca continues the turn itself after the reset: redoing it now would do the work twice.
   if (why === 'failed-continues') {

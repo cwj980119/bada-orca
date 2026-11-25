@@ -19,7 +19,9 @@ import { migrateV45 } from './migrate-v45'
 import { migrateV46 } from './migrate-v46'
 import { migrateV47 } from './migrate-v47'
 import { migrateV48 } from './migrate-v48'
+import { migrateV49 } from './migrate-v49'
 import { DROP_REMOVED_WORK_TRIGGERS_SQL } from '../reset/removed-orchestration-work-store'
+import { DROP_RUN_CONTROL_GUARDS_SQL, installRunControlGuards } from '../runs/run-control-schema'
 
 // CREATE TABLE IF NOT EXISTS won't alter existing tables; migrate atomically before bumping user_version.
 export function migrate(this: OrchestrationDb): void {
@@ -31,6 +33,7 @@ export function migrate(this: OrchestrationDb): void {
 
   this.db.exec('BEGIN IMMEDIATE')
   try {
+    this.db.exec(DROP_RUN_CONTROL_GUARDS_SQL)
     this.db.exec(
       'DROP TRIGGER IF EXISTS trg_deliveries_one_outstanding; DROP VIEW IF EXISTS outstanding_deliveries;'
     )
@@ -55,10 +58,12 @@ export function migrate(this: OrchestrationDb): void {
     migrateV46.call(this, current)
     migrateV47.call(this, current)
     migrateV48.call(this, current)
+    migrateV49.call(this, current)
     this.createMailboxDeliveryIndexesIfPossible()
     // Recreate derived objects after table rebuilds; existing views would prevent RENAME.
     this.db.exec(DERIVED_DELIVERY_SCHEMA_SQL)
     this.db.pragma(`user_version = ${SCHEMA_VERSION}`)
+    installRunControlGuards(this.db)
     this.db.exec('COMMIT')
   } catch (err) {
     this.db.exec('ROLLBACK')

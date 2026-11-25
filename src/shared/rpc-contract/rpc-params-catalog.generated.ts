@@ -50,8 +50,14 @@ import {
 } from '../orchestration/orchestration-crew'
 import {
   OrchestrationMonitorMessageParams,
-  OrchestrationMonitorParams
+  OrchestrationMonitorParams,
+  OrchestrationMonitorRecoverParams
 } from '../orchestration/orchestration-monitor'
+import {
+  MonitorWorkLimitsParams,
+  MonitorWorkParams,
+  MonitorWorksParams
+} from '../orchestration/orchestration-work-monitor'
 import { PeerRunCancelParams } from '../orchestration/remote-owned-wire'
 import {
   OrcadDeclareClientParamsSchema,
@@ -1381,6 +1387,11 @@ export const RPC_PARAMS_BY_METHOD = {
   'orchestration.inbox': InboxParams,
   'orchestration.monitor': OrchestrationMonitorParams,
   'orchestration.monitorMessage': OrchestrationMonitorMessageParams,
+  'orchestration.monitorRecover': OrchestrationMonitorRecoverParams,
+  'orchestration.monitorWork': MonitorWorkParams,
+  'orchestration.monitorWorkLimits': MonitorWorkLimitsParams,
+  'orchestration.monitorWorkStop': MonitorWorkParams,
+  'orchestration.monitorWorks': MonitorWorksParams,
   'orchestration.partyLocation': PartyLocationParams,
   'orchestration.partyOpen': PartyLocationParams,
   'orchestration.peerMailAck': PeerMailAckParams,

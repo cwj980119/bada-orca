@@ -154,7 +154,7 @@ async function settleBotRequests(
   await ensureSenderRecords(runtime, messages)
   for (const message of messages) {
     if (message) {
-      tellSender(runtime, db, message, 'unanswered', why, reason)
+      notifyBotRequestOutcome(runtime, db, message, 'unanswered', why, reason)
     }
   }
 }
@@ -182,7 +182,7 @@ export async function dropUnreadBotRequests(
       .filter((message) => !onlyTo || message.to_handle.endsWith(onlyTo))
     await ensureSenderRecords(runtime, dropped)
     for (const message of dropped) {
-      if (tellSender(runtime, db, message, 'dropped', why)) {
+      if (notifyBotRequestOutcome(runtime, db, message, 'dropped', why)) {
         db.markAsRead([message.id])
       }
     }
@@ -203,20 +203,21 @@ async function ensureSenderRecords(
 }
 
 /** False leaves the request as it was: its sender cannot be verified yet, so a later end retries. */
-function tellSender(
+export function notifyBotRequestOutcome(
   runtime: OrcaRuntimeService,
   db: OrchestrationDb,
   request: MessageRow,
   outcome: BotRequestOutcome,
   why: Parameters<typeof botRequestUnansweredText>[1],
-  reason?: string
+  reason?: string,
+  afterCommit?: (notify: () => void) => void
 ): boolean {
   const record = botRequestRecord(db, request.id)
   if (!record || !awaitsAnswer(record.purpose)) {
     return true
   }
   const body = botRequestUnansweredText(record, why, reason)
-  if (tellPeerSender(runtime, db, request, outcome, body)) {
+  if (tellPeerSender(runtime, db, request, outcome, body, afterCommit)) {
     return true
   }
   const sender = reachableSender(runtime, db, request)
@@ -235,7 +236,12 @@ function tellSender(
     threadId: request.thread_id ?? request.id,
     runId: recipient.runId
   })
-  runtime.notifyMessageArrived(told.to_handle, told.type)
+  const notify = () => runtime.notifyMessageArrived(told.to_handle, told.type)
+  if (afterCommit) {
+    afterCommit(notify)
+  } else {
+    notify()
+  }
   return true
 }
 
@@ -245,7 +251,8 @@ function tellPeerSender(
   db: OrchestrationDb,
   request: MessageRow,
   outcome: BotRequestOutcome,
-  body: string
+  body: string,
+  afterCommit?: (notify: () => void) => void
 ): boolean {
   const route = db.getPeerMailMessage(request.id)
   const conversation = route ? db.getPeerMailConversation(route.conversation_id) : undefined
@@ -261,7 +268,12 @@ function tellPeerSender(
       threadId: request.thread_id ?? request.id,
       sender: peerMailSender(runtime, request.to_handle)
     })
-    notifyPeerMailQueued(db.db)
+    const notify = () => notifyPeerMailQueued(db.db)
+    if (afterCommit) {
+      afterCommit(notify)
+    } else {
+      notify()
+    }
   }
   return true
 }

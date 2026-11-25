@@ -17,6 +17,7 @@ beforeAll(async () => {
     outdir: bundleRoot,
     bundle: true,
     platform: 'node',
+    mainFields: ['module', 'main'],
     format: 'cjs',
     logLevel: 'silent'
   })

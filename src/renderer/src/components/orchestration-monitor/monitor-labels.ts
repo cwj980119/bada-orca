@@ -24,7 +24,6 @@ const labels = {
   loading: 'Loading',
   ready: 'Ready',
   unsupported: 'Update required',
-  error: 'Unavailable',
   bot: 'Bot',
   terminal: 'Terminal',
   external: 'External CLI',
@@ -53,6 +52,9 @@ const labels = {
 } as const
 
 export function monitorLabel(t: Translate, value: string): string {
+  if (value === 'error') {
+    return t('orchestrationMonitor.labels.error', 'Unavailable')
+  }
   return value in labels
     ? t(`orchestrationMonitor.labels.${value}`, labels[value as keyof typeof labels])
     : value

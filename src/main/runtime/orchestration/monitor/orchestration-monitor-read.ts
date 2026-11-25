@@ -17,6 +17,8 @@ import {
 import { parseMessageTaskId } from '../../rpc/methods/orchestration/messaging/message-payload'
 import { readWorkerTerminalHostScope } from '../../../../shared/orchestration/workers/worker-terminal-host-scope'
 import { toSshExecutionHostId } from '../../../../shared/execution-host/execution-host'
+import { botRequestRecord } from '../../rpc/methods/orchestration/messaging/bot-request-record'
+import { enrichMonitorExecution } from './monitor-execution-read'
 
 const LIMIT = 200
 
@@ -38,6 +40,7 @@ export function createMonitorRead(runtime: OrcaRuntimeService) {
       id,
       address: id,
       name: bot.name,
+      avatar: bot.avatar,
       kind: 'bot',
       agent: bot.agent,
       model: bot.launch?.model ?? null,
@@ -85,6 +88,7 @@ export function createMonitorRead(runtime: OrcaRuntimeService) {
         id,
         address,
         name: bot?.name ?? external?.name ?? sender.name ?? address,
+        avatar: bot?.avatar ?? null,
         kind: bot
           ? 'bot'
           : session
@@ -121,7 +125,11 @@ export function createMonitorRead(runtime: OrcaRuntimeService) {
         }
       : null
   }
+  const workRuns = new Map<string, string | undefined>()
   const message = (row: MessageRow): MonitorMessage => {
+    if (!workRuns.has(row.run_id)) {
+      workRuns.set(row.run_id, db.getRun(row.run_id)?.legacy === 0 ? row.run_id : undefined)
+    }
     const dispatchAddress = [row.from_handle, row.to_handle].find((address) =>
       address.startsWith('dispatch:')
     )
@@ -149,7 +157,9 @@ export function createMonitorRead(runtime: OrcaRuntimeService) {
       question: question?.status ?? null,
       outcome: db.getBotRequestOutcome(row.id),
       threadId: row.thread_id,
+      conversationId: botRequestRecord(db, row.id)?.group?.id ?? null,
       runId: row.run_id,
+      workRunId: workRuns.get(row.run_id),
       task: task(parseMessageTaskId(row.payload ?? undefined), dispatchAddress?.slice(9))
     }
   }
@@ -194,6 +204,28 @@ export async function readOrchestrationMonitor(
   }
   const rows = read.db.getInbox(LIMIT + 1)
   const messages = rows.slice(0, LIMIT).map(read.message)
+  const requestIds = read.db.db
+    .prepare(`
+    SELECT m.id FROM bot_requests r JOIN messages m ON m.id = r.message_id
+    LEFT JOIN bot_request_outcomes o ON o.message_id = r.message_id
+    WHERE o.outcome IS NULL OR o.outcome = 'unanswered'
+    ORDER BY CASE WHEN o.outcome IS NULL THEN 0 ELSE 1 END,
+      CASE WHEN o.outcome IS NULL THEN m.sequence END ASC, m.sequence DESC LIMIT ?
+  `)
+    .all(LIMIT + 1)
+  const byId = new Map(messages.map((message) => [message.id, message]))
+  const requests = requestIds.slice(0, LIMIT).flatMap(({ id }) => {
+    if (typeof id !== 'string') {
+      return []
+    }
+    const row = read.db.getMessageById(id)
+    if (!row) {
+      return []
+    }
+    const message = byId.get(id) ?? read.message(row)
+    byId.set(id, message)
+    return [message]
+  })
   const dispatches = read.db.db
     .prepare('SELECT id FROM dispatch_contexts ORDER BY rowid DESC LIMIT ?')
     .all(LIMIT + 1) as { id: string }[]
@@ -210,10 +242,14 @@ export async function readOrchestrationMonitor(
       assignments.push({ id, from: read.resolve(from), to: read.resolve(`dispatch:${id}`), task })
     }
   }
+  const participants = [...read.participants.values()]
+  await enrichMonitorExecution(runtime, participants, [...byId.values()])
   return {
     capturedAt: new Date().toISOString(),
-    participants: [...read.participants.values()],
+    participants,
     messages,
+    requests,
+    requestsLimited: requestIds.length > LIMIT,
     assignments,
     limits: {
       messages: rows.length > LIMIT,

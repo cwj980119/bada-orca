@@ -24,6 +24,7 @@ import { refreshOutstandingDeliveryTrigger } from './schema/migrate-v41'
 import { revokeAgentSessionPublicationFences } from '../../agent-session/agent-session-publication-fence'
 import { RUN_PANE_KEY_MATCH_SUFFIX_SQL } from './pane-key-match'
 import { installWorkerTerminalPriorOwnerIndex } from './worker-terminal/worker-terminal-prior-owner-index'
+import { installRunControlGuards } from './runs/run-control-schema'
 
 class OrchestrationDbCore {
   readonly crewChanges = new CrewChanges()
@@ -49,6 +50,8 @@ class OrchestrationDbCore {
   private changedDispatchIds: Set<string> | null = null
   /** The user's auto-close switch; this runtime's choice also governs the remote workers it coordinates. */
   workerAutoReleaseEnabled: (() => boolean) | undefined
+  runControlChanged: (() => void) | undefined
+  runControlClosed: (() => void) | undefined
 
   constructor(dbPath: (string & {}) | ':memory:') {
     this.db = new Database(dbPath)
@@ -65,6 +68,7 @@ class OrchestrationDbCore {
     // Read before migrate, which drops the capture triggers it may need to rebuild around.
     const removedWorkCaptureWasIntact = isRemovedWorkCaptureIntact(this.db)
     migrate.call(this as unknown as OrchestrationDb)
+    installRunControlGuards(this.db)
     refreshOutstandingDeliveryTrigger(this.db)
     installWorkerTerminalPriorOwnerIndex(this)
     for (const [table, columns] of [
@@ -170,6 +174,7 @@ class OrchestrationDbCore {
   }
 
   close(): void {
+    this.runControlClosed?.()
     this.closed = true
     this.db.close()
   }

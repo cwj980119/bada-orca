@@ -8,6 +8,8 @@ import type { OrchestrationMonitorMessageDetail } from '../../../../shared/orche
 import type { MonitorData, MonitorSelection } from './monitor-host-snapshot'
 import type { MonitorRelation } from './monitor-relations'
 import { deliveryLabel, monitorLabel, monitorParticipantHost } from './monitor-labels'
+import { MonitorExecutionBadge, MonitorProgressBadge } from './MonitorOperationStatus'
+import { progressReason } from './monitor-operation-labels'
 
 export function MonitorMessageBadges({
   message
@@ -17,6 +19,7 @@ export function MonitorMessageBadges({
   const t = useTranslate()
   return (
     <div className="flex flex-wrap gap-1.5">
+      {message.progress ? <MonitorProgressBadge progress={message.progress} /> : null}
       <Badge variant={message.delivery === 'pending' ? 'warning' : 'secondary'}>
         {deliveryLabel(t, message.delivery)}
       </Badge>
@@ -52,7 +55,11 @@ function DetailField({
   )
 }
 
-function MessageBody({ message }: { message: MonitorData['messages'][number] }): React.JSX.Element {
+export function MessageBody({
+  message
+}: {
+  message: MonitorData['messages'][number]
+}): React.JSX.Element {
   const t = useTranslate()
   const [version, retry] = useState(0)
   const [result, setResult] = useState<{
@@ -145,12 +152,14 @@ export function MonitorDetails({
   data,
   relations,
   selection,
-  onSelect
+  onSelect,
+  onOpenWork
 }: {
   data: MonitorData
   relations: MonitorRelation[]
   selection: MonitorSelection
   onSelect: (selection: MonitorSelection) => void
+  onOpenWork?: (hostId: string, runId: string) => void
 }): React.JSX.Element {
   const t = useTranslate()
   const locale = useIntlLocale()
@@ -159,7 +168,9 @@ export function MonitorDetails({
       ? data.participants.find((item) => item.id === selection.id)
       : null
   const message =
-    selection?.kind === 'message' ? data.messages.find((item) => item.id === selection.id) : null
+    selection?.kind === 'message'
+      ? [...data.messages, ...data.requests].find((item) => item.id === selection.id)
+      : null
   const relation =
     selection?.kind === 'relation' ? relations.find((item) => item.id === selection.id) : null
   const name = (id: string) => data.participants.find((item) => item.id === id)?.name ?? id
@@ -182,7 +193,11 @@ export function MonitorDetails({
             <h3 className="break-words text-base font-semibold">{participant.name}</h3>
             <div className="flex gap-2">
               <Badge variant="secondary">{monitorLabel(t, participant.kind)}</Badge>
-              <Badge variant="outline">{monitorLabel(t, participant.state)}</Badge>
+              {participant.execution ? (
+                <MonitorExecutionBadge state={participant.execution.state} />
+              ) : (
+                <Badge variant="outline">{monitorLabel(t, participant.state)}</Badge>
+              )}
             </div>
             <dl className="space-y-4">
               <DetailField label={t('orchestrationMonitor.host', 'Host')}>
@@ -219,11 +234,17 @@ export function MonitorDetails({
           <>
             <h3 className="break-words text-base font-semibold">{message.subject}</h3>
             <MonitorMessageBadges message={message} />
+            {message.progress ? (
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {progressReason(t, message.progress.reason)}
+              </p>
+            ) : null}
             <dl className="space-y-4">
               <DetailField label={t('orchestrationMonitor.from', 'From')}>
                 <Button
                   variant="link"
-                  className="h-auto p-0 text-left whitespace-normal"
+                  size="inlineText"
+                  className="text-left whitespace-normal"
                   onClick={() => onSelect({ kind: 'participant', id: message.from })}
                 >
                   {name(message.from)}
@@ -233,7 +254,8 @@ export function MonitorDetails({
               <DetailField label={t('orchestrationMonitor.to', 'To')}>
                 <Button
                   variant="link"
-                  className="h-auto p-0 text-left whitespace-normal"
+                  size="inlineText"
+                  className="text-left whitespace-normal"
                   onClick={() => onSelect({ kind: 'participant', id: message.to })}
                 >
                   {name(message.to)}
@@ -266,6 +288,15 @@ export function MonitorDetails({
                 </DetailField>
               ) : null}
             </dl>
+            {message.workRunId && onOpenWork ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenWork(message.host.id, message.workRunId!)}
+              >
+                {t('orchestrationMonitor.work.openWork', 'Track this work')}
+              </Button>
+            ) : null}
             <p className="text-xs text-muted-foreground">
               {t(
                 'orchestrationMonitor.receiptNote',
@@ -296,7 +327,8 @@ export function MonitorDetails({
               <Button
                 key={item.id}
                 variant="ghost"
-                className="h-auto w-full flex-col items-start gap-2 p-2 text-left whitespace-normal"
+                size="sm"
+                className="h-auto w-full flex-col items-start text-left whitespace-normal"
                 onClick={() => onSelect({ kind: 'message', id: item.id })}
               >
                 <span className="break-words text-sm">{item.subject}</span>

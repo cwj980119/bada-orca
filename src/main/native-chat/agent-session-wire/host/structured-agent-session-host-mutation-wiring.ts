@@ -100,6 +100,10 @@ export function structuredAgentSessionMutationDelegates(
   attachContext: () => StructuredAgentSessionAttachContext
 ) {
   return {
+    prepareForMail: async (sessionId: string) => {
+      await context().openConversation(sessionId)
+      return agentStart.startStructuredAgentSessionAgentForOperation(attachContext(), sessionId)
+    },
     cancel: (
       caller: StructuredAgentSessionCaller,
       params: Parameters<typeof cancelStructuredAgentSessionTurn>[2]

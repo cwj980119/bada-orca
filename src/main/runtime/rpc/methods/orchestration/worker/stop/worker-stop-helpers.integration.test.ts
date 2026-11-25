@@ -1,10 +1,25 @@
 import { describe, expect, it, vi } from 'vitest'
 import { receipt, useHelperFollowUpCli } from '../testing/helper-follow-up-cli.test-support'
 import '../worker-stop'
+import { stopMonitorWork } from '../../../../../orchestration/monitor/stop-monitor-work'
 
 describe('worker-stop through CLI argv, RPC and SQLite', () => {
   const f = useHelperFollowUpCli()
   const { h, cli, success, start, report } = f
+
+  it('keeps the descendants of a kept-open helper when stopping its whole Run', async () => {
+    const worker = await start('term_coord', 'term_worker')
+    const kept = await start('term_worker', 'term_kept')
+    const child = await start('term_kept', 'term_kept_child')
+    h.db.keepWorkerTerminalOpen(h.runtime.getTerminalPaneKey('term_kept')!)
+    const result = await stopMonitorWork(h.runtime, h.activeRunId)
+    expect(h.db.getWorkerDispatch(worker.dispatchId)?.state).toBe('stopped')
+    expect(h.db.getWorkerDispatch(kept.dispatchId)?.state).toBe('ready')
+    expect(h.db.getWorkerDispatch(child.dispatchId)?.state).toBe('ready')
+    expect(result.stopOutcomes).toContainEqual(
+      expect.objectContaining({ dispatchId: child.dispatchId, state: 'kept_open' })
+    )
+  })
 
   it('stops every helper under the worker and lists the finished and kept-open ones', async () => {
     const worker = await start('term_coord', 'term_worker')

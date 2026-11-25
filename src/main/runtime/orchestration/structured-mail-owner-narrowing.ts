@@ -6,7 +6,7 @@ import { selectOrchestrationPointerBatch } from './mailbox/terminal-pointer/mail
 import type { StructuredMailboxPointerHost } from './mailbox/structured-pointer/structured-mailbox-pointer-host-contract'
 import type { QueuedMessageOwed } from '../../native-chat/agent-session-journal/queued-messages/queued-message-consume-error'
 
-type Owner = Pick<StructuredMailboxPointerHost, 'narrowBatch' | 'mailHeld'>
+type Owner = Pick<StructuredMailboxPointerHost, 'narrowBatch' | 'mailHeld' | 'mailAllowed'>
 type Selection = Omit<Parameters<typeof selectOrchestrationPointerBatch>[0], 'waiters'> & {
   sessionId: string
   offerable: (message: MessageRow) => boolean
@@ -29,7 +29,7 @@ export function selectOwnedMail(
   const waiters = deps.getMessageWaiters(selection.mailboxHandle)
   for (;;) {
     const selected = selectOrchestrationPointerBatch({ ...selection, waiters }).messages.filter(
-      offerable
+      (message) => offerable(message) && deps.host.mailAllowed?.(message.id) !== false
     )
     const narrowed = deps.host.narrowBatch?.(sessionId, selected) ?? {
       messages: selected,
@@ -50,7 +50,7 @@ export function selectOwnedMail(
  *  One the owner holds stays in place, unavailable, until its owner takes mail again. */
 export function ownerAdjustedOwed(
   owed: QueuedMessageOwed,
-  { narrowBatch: narrow, mailHeld }: Owner,
+  { narrowBatch: narrow, mailHeld, mailAllowed }: Owner,
   sessionId: string,
   messageIds: readonly string[],
   db: OrchestrationDb | null
@@ -59,6 +59,9 @@ export function ownerAdjustedOwed(
     return owed
   }
   if (mailHeld?.(sessionId)) {
+    return 'unavailable'
+  }
+  if (messageIds.some((id) => mailAllowed?.(id) === false)) {
     return 'unavailable'
   }
   if (!narrow || !db) {

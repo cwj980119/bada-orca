@@ -31,7 +31,6 @@ import type {
   AgentLaunchPaneVerdict
 } from '../../shared/agent-launch/contracts/agent-launch-pane-verdict'
 import { registerWorktreeChangeInvalidator } from '../ipc/worktrees/listing/worktree-change-invalidators'
-import type { AgentSessionRecordStore } from './agent-session/records/agent-session-record-store'
 import { peekOpenedAgentSessionRecordStore } from './agent-session/records/agent-session-record-store-slot'
 import { createAgentLaunchRecordWarmupGate } from './construction/agent-launch-record-warmup-gate'
 import * as WorkspaceLayouts from './terminal/surface/workspace-layout-stream'
@@ -72,6 +71,7 @@ import {
 } from './orchestration/federation/peer-mail/peer-mail-relay'
 import { structuredAgentSessionHostTabId } from '../../shared/agent-session/view/structured-agent-session-host-tab-id'
 import { runtimeBotChatTreeIndex } from '../bots/bot-chat-tree-host'
+import { stopMonitorWork } from './orchestration/monitor/stop-monitor-work'
 
 const OrcaRuntimeSidebarBase: typeof OrcaRuntimeWithAgentTransitions = ORCA_SIDEBAR_INPUTS_IS_MAIN
   ? OrcaRuntimeWithSidebarTemporal
@@ -79,6 +79,7 @@ const OrcaRuntimeSidebarBase: typeof OrcaRuntimeWithAgentTransitions = ORCA_SIDE
 
 // oxlint-disable-next-line typescript/no-unsafe-declaration-merging -- SAFETY: The existing Linear installer supplies the canonical prototype surface.
 class OrcaRuntimeService extends OrcaRuntimeSidebarBase {
+  protected override stopControlledRun = stopMonitorWork.bind(null, this)
   protected override assertStructuredQueuedMessageAllowed(sessionId: string, messageId: string) {
     botGroups.assertBotGroupQueuedMessageAllowed(this, sessionId, messageId)
   }
@@ -350,9 +351,7 @@ class OrcaRuntimeService extends OrcaRuntimeSidebarBase {
   }
 
   /** Return the already-open record store without waiting. */
-  openedAgentSessionRecordStore(): AgentSessionRecordStore | null {
-    return peekOpenedAgentSessionRecordStore()
-  }
+  openedAgentSessionRecordStore = peekOpenedAgentSessionRecordStore
 }
 // Linear installs these methods on the final runtime prototype below.
 // oxlint-disable-next-line typescript/consistent-type-definitions -- SAFETY: This merge models the installed Linear API.

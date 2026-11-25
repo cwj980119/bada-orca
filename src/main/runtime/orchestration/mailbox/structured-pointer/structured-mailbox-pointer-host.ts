@@ -24,6 +24,7 @@ import { subscribeForRedrive } from './structured-session-journal-redrive'
 import type { JournalPublication } from '../../../../native-chat/agent-session-wire/host/structured-agent-session-conversations'
 import { readAgentJournalTurn } from '../../../../../shared/agent-session/lifecycle/records/agent-session-turn-record'
 import { isAgentSessionContextClear } from '../../../../../shared/agent-session/conversation-context/agent-session-context-clear'
+import { observeMailStart } from './structured-mail-start-observation'
 
 /** Names the dispatch a nudge belongs to on the operation row it writes. */
 export function structuredPointerCallerKey(dispatchId: string): string {
@@ -147,6 +148,34 @@ export function createStructuredMailboxPointerHost(
   return {
     narrowBatch: owner?.narrowBatch,
     mailHeld: owner?.mailHeld,
+    mailAllowed: owner?.mailAllowed,
+    async prepare(sessionId) {
+      const host = getStructuredAgentSessionHost()
+      if (!host || owner?.mailHeld(sessionId)) {
+        return false
+      }
+      let finish: ReturnType<typeof observeMailStart> | undefined
+      try {
+        if (await (await host.conversation(sessionId)).journal.queuedMessages.failureHolds()) {
+          return false
+        }
+        finish = observeMailStart(host, sessionId)
+        const result = await host.prepareForMail(sessionId)
+        finish(result.ok ? undefined : result.refusal.message)
+        if (!result.ok) {
+          console.warn(
+            '[orchestration] recipient CLI could not be started',
+            sessionId,
+            result.refusal
+          )
+        }
+        return result.ok
+      } catch (error) {
+        finish?.(error instanceof Error ? error.message : String(error))
+        console.warn('[orchestration] recipient CLI preparation failed', sessionId, error)
+        return false
+      }
+    },
     async observeMail(attempt) {
       const host = getStructuredAgentSessionHost()
       try {

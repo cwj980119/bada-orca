@@ -13,6 +13,7 @@ const participants: MonitorParticipant[] = [
     address: 'bot:lead',
     name: '총괄 봇',
     kind: 'bot',
+    avatar: 'mascot:A1',
     agent: 'codex',
     model: 'internal-code',
     executionHost: null,
@@ -24,6 +25,7 @@ const participants: MonitorParticipant[] = [
     address: 'bot:review',
     name: '검토 봇',
     kind: 'bot',
+    avatar: 'mascot:B1',
     agent: 'opencode',
     model: 'internal-review',
     executionHost: null,
@@ -98,6 +100,18 @@ const host: MonitorHostSnapshot = {
     capturedAt: '2026-11-22T04:20:00Z',
     participants,
     messages: [
+      {
+        ...message,
+        id: 'msg-answer',
+        from: 'bot:review',
+        to: 'bot:lead',
+        fromAddress: 'bot:review',
+        toAddress: 'bot:lead',
+        subject: '검토 결과',
+        preview: '인증 설정을 확인했습니다. 연결이 복구되면 대기 중인 요청부터 처리하면 됩니다.',
+        createdAt: '2026-11-22T04:19:00Z',
+        threadId: 'msg-review'
+      },
       {
         ...message,
         id: 'msg-question',
@@ -183,12 +197,45 @@ function render(): React.JSX.Element {
   )
 }
 
-export const relationship = defineFixture({ width: 1200, setup, render: () => render() })
+function showMap(frame: HTMLElement): void {
+  const target = [...frame.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((button) =>
+    button.textContent?.includes('관계도')
+  )
+  if (!target) {
+    throw new Error('Relationship tab missing')
+  }
+  target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+}
+
+async function showConversations(frame: HTMLElement): Promise<void> {
+  const target = [...frame.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(
+    (button) => button.textContent?.trim() === '대화'
+  )
+  if (!target) {
+    throw new Error('Conversations tab missing')
+  }
+  target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  )
+}
+
+export const conversations = defineFixture({
+  width: 1200,
+  setup,
+  render,
+  interact: showConversations
+})
+export const relationship = defineFixture({ width: 1200, setup, render, interact: showMap })
 export const participant = defineFixture({
   width: 1200,
   setup,
   render: () => render(),
-  interact: (frame) => {
+  interact: async (frame) => {
+    showMap(frame)
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    )
     const target = [...frame.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('SSH 작업자') && button.hasAttribute('aria-pressed')
     )
@@ -202,10 +249,9 @@ export const originalMessage = defineFixture({
   width: 1200,
   setup,
   render: () => render(),
-  interact: (frame) => {
-    const target = [...frame.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('MCP 연결 설정 검토 요청')
-    )
+  interact: async (frame) => {
+    await showConversations(frame)
+    const target = frame.querySelector<HTMLButtonElement>('article button[aria-expanded]')
     target?.click()
     if (!target) {
       throw new Error('Message missing')
@@ -213,6 +259,61 @@ export const originalMessage = defineFixture({
   }
 })
 export const narrow = defineFixture({ width: 420, setup, render: () => render() })
+export const narrowConversation = defineFixture({
+  width: 420,
+  setup,
+  render,
+  interact: async (frame) => {
+    await showConversations(frame)
+    frame.querySelector<HTMLButtonElement>('nav button')?.click()
+  }
+})
+export const groupConversation = defineFixture({
+  width: 1200,
+  interact: showConversations,
+  setup,
+  render: () => (
+    <div className="h-[960px]">
+      <OrchestrationMonitorView
+        hosts={[
+          {
+            ...host,
+            snapshot: {
+              ...host.snapshot!,
+              messages: [
+                { ...message, conversationId: 'group-review' },
+                {
+                  ...message,
+                  id: 'group-peer',
+                  from: 'bot:review',
+                  to: 'term_ssh',
+                  conversationId: 'group-review',
+                  subject: '서버 연결 확인 요청',
+                  preview: 'SSH 호스트에서도 같은 인증 설정으로 연결되는지 확인해 주세요.',
+                  createdAt: '2026-11-22T04:19:00Z'
+                },
+                {
+                  ...message,
+                  id: 'group-reply',
+                  from: 'term_ssh',
+                  to: 'bot:review',
+                  threadId: 'group-peer',
+                  subject: '서버 검증 완료',
+                  preview: '원격 호스트에서도 연결과 요청 처리가 정상적으로 동작합니다.',
+                  createdAt: '2026-11-22T04:20:00Z'
+                }
+              ]
+            }
+          }
+        ]}
+        refreshing={false}
+        onRefresh={() => {}}
+        onBack={() => {}}
+        onConfigure={() => {}}
+      />
+    </div>
+  )
+})
 export const empty = defineFixture({
   width: 1100,
   setup,

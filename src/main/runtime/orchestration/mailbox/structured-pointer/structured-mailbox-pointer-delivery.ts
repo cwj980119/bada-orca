@@ -1,20 +1,12 @@
 /** Chats queue whole mail one per turn behind work/questions; terminals keep the PTY pointer lane. */
 
-import type { MessageRow } from '../../db/orchestration-records'
 import type { OrchestrationDb } from '../../db/orchestration-db'
-import type { SenderSnapshotResolver } from '../senders/agent-message-sender'
-import {
-  shouldReleaseOrchestrationPointer,
-  type OrchestrationMessageWaiter
-} from '../terminal-pointer/mailbox-pointer-eligibility'
-import { mintAgentSessionOperationId } from './structured-pointer-operation-id'
+import type { OrchestrationMessageWaiter } from '../terminal-pointer/mailbox-pointer-eligibility'
 import type {
   StructuredMailFollowUp,
   StructuredPointerDeliveryDependencies
 } from './structured-mailbox-pointer-host-contract'
 import { completionReportFollowUp } from '../../workers/reports/report-follow-up-action'
-import { structuredMailMessage } from '../structured-mail/structured-mail-source'
-import type { StructuredMailSendRow } from '../../db/messages/structured-mail-send-store'
 import type { QueuedMessageOwed } from '../../../../native-chat/agent-session-journal/queued-messages/queued-message-consume-error'
 import {
   orchestrationMailNotice,
@@ -24,6 +16,7 @@ import { StructuredMailboxParking } from '../structured-mail/structured-mailbox-
 import { ownerAdjustedOwed, selectOwnedMail } from '../../structured-mail-owner-narrowing'
 import { StructuredMailSettledState } from '../structured-mail/structured-mail-settled-state'
 import * as mailCustody from '../structured-mail/structured-mail-custody'
+import { createStructuredMailAdmission } from './structured-mail-admission'
 
 export type StructuredPointerTarget = {
   sessionId: string
@@ -31,11 +24,10 @@ export type StructuredPointerTarget = {
   dispatchId: string | null
 }
 
-type AdmitStep = 'next' | 'park'
-
 export class OrchestrationStructuredMailboxPointerDelivery<
   TWaiter extends OrchestrationMessageWaiter
 > {
+  private readonly admit: ReturnType<typeof createStructuredMailAdmission<TWaiter>>
   private readonly inFlight = new Set<string>()
   /** Edges that arrived during a pass: one more pass runs after it, so none is lost. */
   private readonly rerun = new Map<string, Set<string>>()
@@ -56,6 +48,12 @@ export class OrchestrationStructuredMailboxPointerDelivery<
     // Without the runtime's own answer, a finished report still offers its follow-up.
     this.replyFollowUp = (db, message, sessionId) =>
       deps.replyFollowUp?.(db, message, sessionId) ?? completionReportFollowUp(db, message)
+    this.admit = createStructuredMailAdmission({
+      deps,
+      authority: this.authority,
+      replyFollowUp: this.replyFollowUp,
+      redeliver: (mailbox) => this.redeliver(mailbox)
+    })
   }
 
   deliverForHandle(mailboxHandle: string, reservedTypes?: ReadonlySet<string>): boolean {
@@ -251,100 +249,6 @@ export class OrchestrationStructuredMailboxPointerDelivery<
       }
       // The arrival snapshot protects its first handoff; successors derive live waiter ownership.
       currentReservedTypes = undefined
-    }
-  }
-
-  // A session whose agent is not running needs nothing first: an accepted send starts it.
-  private async admit(
-    db: OrchestrationDb,
-    mailboxHandle: string,
-    target: StructuredPointerTarget,
-    message: MessageRow,
-    senderSnapshot: SenderSnapshotResolver,
-    again?: mailCustody.StructuredMailResend
-  ): Promise<AdmitStep> {
-    const sessionId = target.sessionId
-    // Read before the fence, so a slow item read cannot leave the send a stale one; it never stops the send.
-    const reportItem = this.deps.reportItem
-      ? await this.deps.reportItem(db, message).catch(() => null)
-      : null
-    const fence = this.deps.host.currentFence(sessionId)
-    if (fence === null) {
-      return 'park'
-    }
-    const { body } = structuredMailMessage({
-      db,
-      mailboxHandle,
-      ...target,
-      message,
-      cliCommand: this.deps.getCliCommand(),
-      senderSnapshot,
-      followUp: this.replyFollowUp(db, message, sessionId),
-      reportItem,
-      conversationPlace: (from) => this.deps.conversationPlace?.(sessionId, from) ?? null
-    })
-    const attempt: StructuredMailSendRow = {
-      mailbox_handle: mailboxHandle,
-      message_id: message.id,
-      session_id: sessionId,
-      operation_id:
-        again && !again.renew ? again.row.operation_id : mintAgentSessionOperationId(Date.now()),
-      minted_at_ms: again && !again.renew ? again.row.minted_at_ms : Date.now()
-    }
-    // Reserved before the send, with its delivered stamp, so a crash after it lands finds the card
-    // instead of sending twice. Only the pass whose reservation lands sends.
-    if (!db.reserveStructuredMailSend(attempt, again?.row.operation_id)) {
-      return 'next'
-    }
-    // The host's last answer, set inside its own check: a holder, so the read after the send sees it.
-    const last: { owed: QueuedMessageOwed } = { owed: 'owed' }
-    const outcome = await this.deps.host.send({
-      sessionId,
-      dispatchId: target.dispatchId,
-      operationId: attempt.operation_id,
-      expectedRuntimeFence: fence,
-      body,
-      stillOwed: () => {
-        last.owed = this.authority.owedTo(sessionId, mailboxHandle, [message.id])
-        return (
-          last.owed === 'owed' &&
-          !shouldReleaseOrchestrationPointer(
-            this.deps.getDb(),
-            mailboxHandle,
-            [message],
-            this.deps.getMessageWaiters(mailboxHandle)
-          )
-        )
-      }
-    })
-    switch (outcome.kind) {
-      case 'unattached':
-      case 'refused':
-        // Refused before admission (a full queue, a detached chat): retry on the session's next edge.
-        db.releaseStructuredMailSend(attempt)
-        return 'park'
-      case 'obsolete':
-        db.releaseStructuredMailSend(attempt)
-        if (last.owed === 'stale') {
-          // Custody moved during the send: its owner now, a terminal included, is told.
-          queueMicrotask(() => this.redeliver(mailboxHandle))
-        }
-        return last.owed === 'unavailable' ? 'park' : 'next'
-      case 'queued':
-        return 'next'
-      case 'sent':
-        // In doubt, including a resend the host answered from an earlier admission: never again.
-        if (outcome.state === 'accepted' || outcome.state === 'unknown') {
-          const observed = await mailCustody.observeStructuredMailAttempt(this.deps.host, attempt)
-          const settled = mailCustody.settleStructuredMailAttempt(db, attempt, observed, () =>
-            this.authority.owedTo(sessionId, mailboxHandle, [message.id])
-          )
-          if (settled.released) {
-            queueMicrotask(() => this.redeliver(mailboxHandle))
-          }
-        }
-        // Pending or rejected: the record decides on a later pass.
-        return 'next'
     }
   }
 

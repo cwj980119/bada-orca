@@ -9,9 +9,21 @@ import { existsSync } from 'node:fs'
 import { structuredMailboxCustody } from '../mailbox/routing/structured-session-mail-target'
 import { closeOrphanedTerminalApprovals } from '../workers/approvals/terminal-approval-orphans'
 import { OrcaRuntimeWithAutomationApiOperations } from '../../workspaces/persisted-surfaces/automation-api-operations'
+import { RunControlSupervisor } from '../monitor/run-control-supervisor'
 
 export abstract class RuntimeOrchestrationDatabaseAccess extends OrcaRuntimeWithAutomationApiOperations {
   private orchestrationDbMaintenance: OrchestrationDbMaintenance | undefined
+  private runControlSupervisor: RunControlSupervisor | undefined
+
+  protected abstract stopControlledRun(runId: string, reason: 'user' | 'deadline'): Promise<unknown>
+
+  private bindRunControls(db: OrchestrationDb): void {
+    this.runControlSupervisor?.close()
+    this.runControlSupervisor = new RunControlSupervisor(db, (id, reason) =>
+      this.stopControlledRun(id, reason)
+    )
+    this.runControlSupervisor.start()
+  }
 
   abstract ensureOrchestrationFederationRelay(
     runId?: string,
@@ -30,6 +42,7 @@ export abstract class RuntimeOrchestrationDatabaseAccess extends OrcaRuntimeWith
     if (!this._orchestrationDb) {
       const db = new OrchestrationDb(this.orchestrationDbPath())
       this._orchestrationDb = db
+      this.bindRunControls(db)
       this.orchestrationDbMaintenance = new OrchestrationDbMaintenance(
         db,
         (dispatchId) => isReleasedChatReadable(db, dispatchId),
@@ -67,6 +80,7 @@ export abstract class RuntimeOrchestrationDatabaseAccess extends OrcaRuntimeWith
     this.orchestrationFederation.resetForDatabaseChange()
     this.mailPointerRepointScheduler.clear()
     this._orchestrationDb = db
+    this.bindRunControls(db)
     this.bindMailHandBack(db)
     this.bindCrewChanges(db)
     this.ensureOrchestrationFederationRelay()

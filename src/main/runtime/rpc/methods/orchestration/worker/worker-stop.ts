@@ -10,6 +10,8 @@ import type {
   WorkerStopReceipt
 } from '../../../../../../shared/orchestration/workers/orchestration-worker-stop-receipt'
 import { stopSingleWorker, type StopMutation } from './stop/single-worker-stop'
+import { runIsClosed } from '../../../../orchestration/db/runs/run-controls'
+import { stopMonitorWork } from '../../../../orchestration/monitor/stop-monitor-work'
 
 export const ORCHESTRATION_WORKER_STOP_METHODS = [
   defineOrchestrationMethod({
@@ -152,7 +154,16 @@ export async function stopHelperAfterStart(
     return
   }
   const db = runtime.getOrchestrationDb()
-  const creator = db.getDispatchContextById(dispatchId)?.creator_dispatch_id
+  const dispatch = db.getDispatchContextById(dispatchId)
+  if (dispatch?.run_id && runIsClosed(db, dispatch.run_id)) {
+    await stopMonitorWork(runtime, dispatch.run_id, 'deadline')
+    // A coalesced stop may have observed this worker before it became ready.
+    if (['ready', 'start_unknown'].includes(db.getWorkerDispatch(dispatchId)?.state ?? '')) {
+      await stopMonitorWork(runtime, dispatch.run_id, 'deadline')
+    }
+    return
+  }
+  const creator = dispatch?.creator_dispatch_id
   if (!creator || !db.isWorkerStopRequested(creator)) {
     return
   }

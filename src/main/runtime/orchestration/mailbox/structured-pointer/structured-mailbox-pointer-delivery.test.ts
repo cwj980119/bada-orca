@@ -287,6 +287,49 @@ const flush = async () => {
 }
 
 describe('structured mailbox delivery: each message whole', () => {
+  it('keeps mail undelivered until the recipient CLI is ready', async () => {
+    const h = harness()
+    let ready: (value: boolean) => void = () => {}
+    h.host.prepare = () =>
+      new Promise((resolve) => {
+        ready = resolve
+      })
+    h.receive('startup')
+    await h.deliver()
+    expect(h.mail.get('startup')).toMatchObject({ read: 0, delivered_at: null })
+    expect(h.sent).toEqual([])
+    ready(true)
+    await flush()
+    expect(h.mail.get('startup')).toMatchObject({ read: 1, delivered_at: 'now' })
+    expect(h.sent.map((item) => item.sessionId)).toEqual(['session-1'])
+  })
+
+  it('retains mail when startup fails and delivers it on a later successful wake', async () => {
+    const h = harness()
+    h.host.prepare = async () => false
+    h.receive('sleeping')
+    await h.deliver()
+    expect(h.mail.get('sleeping')).toMatchObject({ read: 0, delivered_at: null })
+    expect(h.sent).toEqual([])
+    h.host.prepare = async () => true
+    await h.deliver()
+    expect(h.mail.get('sleeping')).toMatchObject({ read: 1, delivered_at: 'now' })
+  })
+
+  it('does not deliver to an owner replaced while its CLI starts', async () => {
+    const h = harness()
+    h.host.prepare = async () => {
+      h.setOwner('session-2')
+      return true
+    }
+    h.receive('moved')
+    await h.deliver()
+    expect(h.mail.get('moved')).toMatchObject({ read: 0, delivered_at: null })
+    expect(h.sent).toEqual([])
+    await h.deliver()
+    expect(h.sent.map((item) => item.sessionId)).toEqual(['session-2'])
+  })
+
   it('settles a handoff that wins stale-card withdrawal without sending it to the new owner', async () => {
     const h = harness({ busy: true })
     h.receive('m1')

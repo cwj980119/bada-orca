@@ -22,6 +22,12 @@ export function mergeMonitorHosts(hosts: readonly MonitorHostSnapshot[]) {
         ...participant,
         id: monitorKey(host.id, participant.id),
         host,
+        execution:
+          host.state === 'ready'
+            ? participant.execution
+            : participant.execution
+              ? { state: 'unavailable' as const, observedAt: participant.execution.observedAt }
+              : undefined,
         state: host.state === 'ready' ? participant.state : ('unknown' as const)
       }))
     ),
@@ -37,6 +43,18 @@ export function mergeMonitorHosts(hosts: readonly MonitorHostSnapshot[]) {
         }))
       )
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    requests: hosts
+      .flatMap((host) =>
+        (host.snapshot?.requests ?? []).map((message) => ({
+          ...message,
+          rawId: message.id,
+          id: monitorKey(host.id, message.id),
+          host,
+          from: monitorKey(host.id, message.from),
+          to: monitorKey(host.id, message.to)
+        }))
+      )
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     assignments: hosts.flatMap((host) =>
       (host.snapshot?.assignments ?? []).map((assignment) => ({
         ...assignment,

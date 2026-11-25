@@ -28,6 +28,9 @@ export type StructuredPointerSendOutcome =
   | { kind: 'obsolete' }
 
 export type StructuredMailboxPointerHost = {
+  mailAllowed?: StructuredMailOwner['mailAllowed']
+  /** Open a resting conversation and join CLI startup before accepting its mail. */
+  prepare?: (sessionId: string) => Promise<boolean>
   send: (input: {
     sessionId: string
     dispatchId: string | null
@@ -56,6 +59,8 @@ export type StructuredMailboxPointerHost = {
 
 /** A session owner's rules for the mail it receives: what one turn carries, and admitting it. */
 export type StructuredMailOwner = {
+  /** A fenced request stays unread; replies and unrelated work remain deliverable. */
+  mailAllowed?: (messageId: string) => boolean
   narrowBatch: (
     sessionId: string,
     messages: MessageRow[]
