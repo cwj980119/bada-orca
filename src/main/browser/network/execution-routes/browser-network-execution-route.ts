@@ -1,4 +1,4 @@
-import { connect } from 'node:net'
+import { connectBrowserSocket } from '../../../network/intranet-network'
 import { browserNetworkExecutionHostKey } from '../../../../shared/browser/client-hosting/browser-network-execution-host'
 import type { BrowserNetworkTunnelOpen } from '../../../../shared/browser/network/tunnels/browser-network-tunnel-protocol'
 import type { BrowserNetworkTunnelSocket } from '../tunnels/browser-network-tunnel-stream-state'
@@ -42,14 +42,14 @@ export function resolveNativeBrowserNetworkExecutionRoute(
 }
 
 const nativeDialer: BrowserNetworkTunnelDialer = {
-  connect: (target) => connect({ ...target, allowHalfOpen: true }),
+  connect: (target) => connectBrowserSocket({ ...target, allowHalfOpen: true }),
   openTransport: openConnectedSocket
 }
 
 // Paired clients choose these destinations, so the host refuses metadata and its own Orca listeners.
 const guardedNativeDialer: BrowserNetworkTunnelDialer = {
   connect: (target) =>
-    connect({
+    connectBrowserSocket({
       ...target,
       allowHalfOpen: true,
       lookup: createBrowserTunnelGuardedLookup(target.port, (reason) =>

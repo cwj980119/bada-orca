@@ -1,10 +1,17 @@
-import { Socket } from 'node:net'
+import { connect, Socket, type TcpNetConnectOpts } from 'node:net'
 import { syncBuiltinESMExports } from 'node:module'
 import { isIntranetHost, isIntranetUrl } from '../../shared/intranet/intranet-network-policy'
 import { intranetAllowedHosts, readIntranetSettings } from '../../shared/intranet/intranet-settings'
 
 let settingsReader: (() => unknown) | undefined
 let installed = false
+const browserSocketOptions = new WeakSet<object>()
+
+export function connectBrowserSocket(options: TcpNetConnectOpts): Socket {
+  const browserOptions = { ...options }
+  browserSocketOptions.add(browserOptions)
+  return connect(browserOptions)
+}
 
 export function configureIntranetNetwork(reader: () => unknown): void {
   settingsReader = reader
@@ -43,6 +50,10 @@ export function assertIntranetRequest(url: string): void {
 function socketHostname(args: unknown[]): string | null {
   const first = Array.isArray(args[0]) ? args[0][0] : args[0]
   if (typeof first === 'object' && first !== null) {
+    // Browser sessions enforce request policy before their transport opens a socket.
+    if (browserSocketOptions.has(first)) {
+      return null
+    }
     if ('path' in first && typeof first.path === 'string') {
       return null
     }
@@ -59,7 +70,9 @@ export function installIntranetNodeNetworkGuard(): void {
     return
   }
   installed = true
-  const connect = Socket.prototype.connect
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the wrapper forwards Node's original connect arguments unchanged.
+  const connect = Socket.prototype.connect as (this: Socket, ...args: unknown[]) => Socket
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: admitted requests retain all original connect overloads and return the same socket.
   Socket.prototype.connect = function (this: Socket, ...args: unknown[]): Socket {
     const host = socketHostname(args)
     if (host !== null && !isIntranetHost(host, allowedHosts())) {
@@ -68,7 +81,7 @@ export function installIntranetNodeNetworkGuard(): void {
       )
       return this
     }
-    return Reflect.apply(connect, this, args)
+    return connect.apply(this, args)
   } as Socket['connect']
   syncBuiltinESMExports()
   const fetch = globalThis.fetch

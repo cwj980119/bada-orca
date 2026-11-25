@@ -1,4 +1,5 @@
-import { connect, type Socket } from 'node:net'
+import type { Socket } from 'node:net'
+import { connectBrowserSocket } from '../../../network/intranet-network'
 import type { BrowserNetworkTunnelOpen } from '../../../../shared/browser/network/tunnels/browser-network-tunnel-protocol'
 
 // Settle on connect so an immediate dial error (emitted on nextTick) cannot outrun its listener.
@@ -7,7 +8,7 @@ export function openConnectedSocket(
   signal: AbortSignal
 ): Promise<Socket> {
   return new Promise((resolve, reject) => {
-    const socket = connect({ ...endpoint, allowHalfOpen: true })
+    const socket = connectBrowserSocket({ ...endpoint, allowHalfOpen: true })
     const abandon = (): void => {
       socket.destroy()
       reject(new Error('browser_tunnel_proxy_connect_abandoned'))

@@ -1,5 +1,6 @@
 import { app, session } from 'electron'
 import { configureIntranetNetwork } from '../network/intranet-network'
+import { configureBrowserNetworkExceptionSettings } from '../browser/guest-lifecycle/prompts/browser-network-exception-settings'
 import { configureMacMenuDeadKeyGuard } from '../menu/macos-menu-dead-key'
 import { applyBackgroundActivationPolicy } from '../window/activation/foreground-activation-policy'
 import { applyElectronProxySettings } from '../network/proxy-settings'
@@ -177,6 +178,7 @@ export async function initializeReadyFoundation(): Promise<void> {
   const store = profileState.store
   state.store = store
   configureIntranetNetwork(() => store.getSettings().intranet)
+  configureBrowserNetworkExceptionSettings(store)
   store.onSettingsChanged(() => configureIntranetNetwork(() => store.getSettings().intranet))
   hangWatchdog?.setMenuBarIconSetting(store.getSettings().showMenuBarIcon !== false)
   // SSH users keep ssh2 loaded before interactive use, as before #35731; others load it on first connect.

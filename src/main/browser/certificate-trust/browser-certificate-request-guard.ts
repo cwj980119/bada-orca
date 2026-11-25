@@ -1,6 +1,7 @@
 import type { Session } from 'electron'
 import { intranetRequestAllowed } from '../../network/intranet-network'
 import { installElectronProxyRequestGuard } from '../../network/electron-proxy-request-guard'
+import { requestBrowserNetworkException } from '../guest-lifecycle/prompts/browser-network-exception-prompt'
 
 import { toSecureCertificateEndpoint } from '../../../shared/browser/navigation/browser-url'
 import { getProxySessionApplicationReadiness } from '../../network/proxy-settings'
@@ -50,26 +51,58 @@ export class BrowserCertificateRequestGuard {
     }
     // Chromium caches trust per session; gate requests to preserve approval per WebContents.
     session.webRequest.onBeforeRequest((details, callback) => {
-      if (!intranetRequestAllowed(details.url)) {
-        callback({ cancel: true })
+      const browsingRequest =
+        /^https?:/.test(details.url) &&
+        ['GET', 'HEAD', 'OPTIONS'].includes(details.method) &&
+        !details.uploadData?.length
+      if (!browsingRequest && !intranetRequestAllowed(details.url)) {
+        const approval = requestBrowserNetworkException(session, details, () =>
+          this.guardedSessions.has(session)
+        )
+        if (approval === false) {
+          callback({ cancel: true })
+          return
+        }
+        void approval.then(
+          (allowed) => {
+            if (allowed && intranetRequestAllowed(details.url)) {
+              this.answerRequest(session, details, callback)
+            } else {
+              callback({ cancel: true })
+            }
+          },
+          () => callback({ cancel: true })
+        )
         return
       }
-      reportBrowserSessionWebRequest(session, 'onBeforeRequest', details)
-      const readiness = getProxySessionApplicationReadiness(session)
-      const answer = (ready: boolean): void => {
-        if (!ready || this.shouldBlockRequest(session, details)) {
-          callback({ cancel: true })
-        } else {
-          answerBrowserSessionBeforeRequest(session, details, callback)
-        }
-      }
-      if (typeof readiness === 'boolean') {
-        answer(readiness)
-      } else {
-        void readiness.then(answer)
-      }
+      this.answerRequest(session, details, callback)
     })
     this.guardedSessions.add(session)
+  }
+
+  private answerRequest(
+    session: Session,
+    details: Electron.OnBeforeRequestListenerDetails,
+    callback: (response: Electron.CallbackResponse) => void
+  ): void {
+    reportBrowserSessionWebRequest(session, 'onBeforeRequest', details)
+    const readiness = getProxySessionApplicationReadiness(session)
+    const answer = (ready: boolean): void => {
+      if (
+        !ready ||
+        !this.guardedSessions.has(session) ||
+        this.shouldBlockRequest(session, details)
+      ) {
+        callback({ cancel: true })
+      } else {
+        answerBrowserSessionBeforeRequest(session, details, callback)
+      }
+    }
+    if (typeof readiness === 'boolean') {
+      answer(readiness)
+    } else {
+      void readiness.then(answer)
+    }
   }
 
   removeSession(session: Session): void {

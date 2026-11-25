@@ -114,7 +114,7 @@ export function IntranetSettingsPane({
         title={t('intranet.network', 'Internal servers')}
         description={t(
           'intranet.networkDescription',
-          'Only local, private IP addresses and the servers configured here are allowed. Model and enabled MCP endpoints below are allowed automatically.'
+          'Data transfers to local and private IP addresses, BADA and approved servers are allowed. The built-in browser can read public web pages; write requests, uploads and WebSockets to other servers wait for your approval to add an exception. Model and enabled MCP endpoints below are approved automatically.'
         )}
       >
         <div data-settings-row="" className="space-y-2 py-4">

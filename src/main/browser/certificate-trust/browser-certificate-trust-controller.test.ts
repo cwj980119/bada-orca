@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { BrowserCertificateTrustController } from './browser-certificate-trust-controller'
 import { resetSessionProxyApplicationForTests } from '../../network/proxy-settings'
+import { configureIntranetNetwork } from '../../network/intranet-network'
+import { defaultIntranetSettings } from '../../../shared/intranet/intranet-settings'
 
 const FIRST_CERTIFICATE = certificate('first certificate')
 let beforeRequestListener:
@@ -47,6 +49,8 @@ function createGuest(id: number): Electron.WebContents {
 
 function beforeRequest(args: {
   url?: string
+  method?: string
+  uploadData?: Electron.UploadData[]
   webContentsId?: number
   resourceType?: Electron.OnBeforeRequestListenerDetails['resourceType']
 }) {
@@ -55,12 +59,12 @@ function beforeRequest(args: {
     {
       id: 1,
       url: args.url ?? 'https://localhost:3443/app',
-      method: 'GET',
+      method: args.method ?? 'GET',
       webContentsId: args.webContentsId,
       resourceType: args.resourceType ?? 'mainFrame',
       referrer: '',
       timestamp: 1,
-      uploadData: []
+      uploadData: args.uploadData ?? []
     },
     callback
   )
@@ -102,6 +106,7 @@ describe('BrowserCertificateTrustController', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    configureIntranetNetwork(defaultIntranetSettings)
     resetSessionProxyApplicationForTests(browserSession)
     vi.mocked(guest.isDestroyed).mockReturnValue(false)
     vi.mocked(otherGuest.isDestroyed).mockReturnValue(false)
@@ -140,6 +145,42 @@ describe('BrowserCertificateTrustController', () => {
       createChallengeId: () => `challenge-${++challengeNumber}`
     })
     controller.installSessionRequestGuard(browserSession)
+  })
+
+  it('allows public page reads while restricting data submission to approved servers', () => {
+    expect(beforeRequest({ url: 'https://example.com/page' })).toHaveBeenCalledWith({})
+    expect(
+      beforeRequest({ url: 'https://cdn.example.com/script.js', resourceType: 'script' })
+    ).toHaveBeenCalledWith({})
+    expect(beforeRequest({ url: 'https://example.com/form', method: 'POST' })).toHaveBeenCalledWith(
+      {
+        cancel: true
+      }
+    )
+    expect(
+      beforeRequest({
+        url: 'https://example.com/upload',
+        uploadData: [{ bytes: Buffer.from('private data') }]
+      })
+    ).toHaveBeenCalledWith({ cancel: true })
+    expect(
+      beforeRequest({ url: 'wss://example.com/socket', resourceType: 'webSocket' })
+    ).toHaveBeenCalledWith({ cancel: true })
+
+    configureIntranetNetwork(() => ({
+      ...defaultIntranetSettings(),
+      allowedHosts: ['example.com']
+    }))
+    expect(beforeRequest({ url: 'https://example.com/form', method: 'POST' })).toHaveBeenCalledWith(
+      {}
+    )
+    expect(
+      beforeRequest({ url: 'wss://example.com/socket', resourceType: 'webSocket' })
+    ).toHaveBeenCalledWith({})
+    expect(
+      beforeRequest({ url: 'https://other.example.com/form', method: 'POST' })
+    ).toHaveBeenCalledWith({ cancel: true })
+    configureIntranetNetwork(defaultIntranetSettings)
   })
 
   it('blocks a session-cached certificate for sibling requests until that guest approves it', () => {

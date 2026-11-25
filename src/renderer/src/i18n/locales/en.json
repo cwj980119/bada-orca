@@ -67,8 +67,15 @@
     },
     "apiKeyEnv": "API key environment variable (optional)",
     "opencodePair": "Enter both the OpenCode server URL and model ID, or leave both empty to use your existing CLI configuration.",
+    "networkException": {
+      "title": "Allow external data transfer?",
+      "description": "A request to {{origin}} is on hold. Adding {{hostname}} to the exception list allows this request and future Orca data transfers to this hostname. This applies to all ports and paths on this host, not other subdomains.",
+      "allow": "Add exception and allow",
+      "block": "Keep blocked",
+      "failed": "Could not save the exception for {{hostname}}."
+    },
     "network": "Internal servers",
-    "networkDescription": "Only local, private IP addresses and the servers configured here are allowed. Model and enabled MCP endpoints below are allowed automatically.",
+    "networkDescription": "Data transfers to local and private IP addresses, BADA and approved servers are allowed. The built-in browser can read public web pages; write requests, uploads and WebSockets to other servers wait for your approval to add an exception. Model and enabled MCP endpoints below are approved automatically.",
     "allowedHosts": "Allowed hostnames, IP addresses and IPv4 ranges",
     "hostsHelp": "One entry per line. Use hostnames without a scheme or path. This applies to connections made by Orca. CLI tools retain their own network configuration.",
     "opencodeDescription": "Uses the installed OpenCode CLI. Leave these fields empty to keep its existing internal provider and credentials.",

@@ -11,6 +11,7 @@ import type {
 
 /** Every prompt a page in the built-in browser can raise: what it shows, and an answer. */
 export type BrowserPagePromptKinds = {
+  'network-exception': { details: { origin: string; hostname: string }; answer: 'allow' }
   'external-app': { details: BrowserExternalAppPrompt; answer: BrowserExternalAppAnswer }
   'http-auth': { details: BrowserHttpAuthPrompt; answer: BrowserHttpAuthCredentials }
   'javascript-dialog': {
