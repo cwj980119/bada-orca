@@ -1,3 +1,4 @@
+import { settleMonitorAction } from './settle-monitor-action'
 import { useState } from 'react'
 import { ExternalLink, FileText, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -28,31 +29,37 @@ export function MonitorWorkerOutput({
     }
     setPending(true)
     setError(null)
-    try {
-      setOutput(
-        await callRuntimeRpc<OrchestrationWorkerReadResult>(
-          host.target,
-          'orchestration.workerRead',
-          { dispatch: dispatchId, source: 'auto', limit: 60 },
-          { timeoutMs: 20_000 }
-        )
-      )
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
-    } finally {
-      setPending(false)
-    }
+    await settleMonitorAction(
+      async () => {
+        try {
+          setOutput(
+            await callRuntimeRpc<OrchestrationWorkerReadResult>(
+              host.target,
+              'orchestration.workerRead',
+              { dispatch: dispatchId, source: 'auto', limit: 60 },
+              { timeoutMs: 20_000 }
+            )
+          )
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : String(cause))
+        }
+      },
+      () => setPending(false)
+    )
   }
   const open = async () => {
     setOpening(true)
     setError(null)
-    try {
-      await openOrchestrationDispatch(`dispatch:${dispatchId}`, label, host.target)
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
-    } finally {
-      setOpening(false)
-    }
+    await settleMonitorAction(
+      async () => {
+        try {
+          await openOrchestrationDispatch(`dispatch:${dispatchId}`, label, host.target)
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : String(cause))
+        }
+      },
+      () => setOpening(false)
+    )
   }
   const text =
     output?.source === 'terminal'

@@ -1,3 +1,4 @@
+import { settleMonitorAction } from './settle-monitor-action'
 import { useState } from 'react'
 import { Loader2, ShieldCheck, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -43,30 +44,33 @@ export function MonitorWorkLimits({
     setPending(action)
     setError(null)
     setSaved(false)
-    try {
-      await callRuntimeRpc(
-        host.target,
-        action === 'save' ? 'orchestration.monitorWorkLimits' : 'orchestration.monitorWorkStop',
-        action === 'save'
-          ? {
-              runId: work.id,
-              revision: work.limits.revision,
-              maxActiveWorkers: workers === '' ? null : Number(workers),
-              maxBotRequests: requests === '' ? null : Number(requests),
-              deadlineAt: deadline ? new Date(deadline).toISOString() : null
-            }
-          : { runId: work.id },
-        { timeoutMs: 60_000 }
-      )
-      setSaved(action === 'save')
-      setConfirmStop(false)
-      onRefresh()
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
-      onRefresh()
-    } finally {
-      setPending(null)
-    }
+    await settleMonitorAction(
+      async () => {
+        try {
+          await callRuntimeRpc(
+            host.target,
+            action === 'save' ? 'orchestration.monitorWorkLimits' : 'orchestration.monitorWorkStop',
+            action === 'save'
+              ? {
+                  runId: work.id,
+                  revision: work.limits.revision,
+                  maxActiveWorkers: workers === '' ? null : Number(workers),
+                  maxBotRequests: requests === '' ? null : Number(requests),
+                  deadlineAt: deadline ? new Date(deadline).toISOString() : null
+                }
+              : { runId: work.id },
+            { timeoutMs: 60_000 }
+          )
+          setSaved(action === 'save')
+          setConfirmStop(false)
+          onRefresh()
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : String(cause))
+          onRefresh()
+        }
+      },
+      () => setPending(null)
+    )
   }
   return (
     <section className="rounded-xl border bg-card p-4 text-card-foreground">

@@ -24,7 +24,7 @@ import { refreshOutstandingDeliveryTrigger } from './schema/migrate-v41'
 import { revokeAgentSessionPublicationFences } from '../../agent-session/agent-session-publication-fence'
 import { RUN_PANE_KEY_MATCH_SUFFIX_SQL } from './pane-key-match'
 import { installWorkerTerminalPriorOwnerIndex } from './worker-terminal/worker-terminal-prior-owner-index'
-import { installRunControlGuards } from './runs/run-control-schema'
+import { RUN_CONTROL_GUARDS_SQL } from './runs/run-control-schema'
 
 class OrchestrationDbCore {
   readonly crewChanges = new CrewChanges()
@@ -68,7 +68,6 @@ class OrchestrationDbCore {
     // Read before migrate, which drops the capture triggers it may need to rebuild around.
     const removedWorkCaptureWasIntact = isRemovedWorkCaptureIntact(this.db)
     migrate.call(this as unknown as OrchestrationDb)
-    installRunControlGuards(this.db)
     refreshOutstandingDeliveryTrigger(this.db)
     installWorkerTerminalPriorOwnerIndex(this)
     for (const [table, columns] of [
@@ -126,6 +125,7 @@ class OrchestrationDbCore {
         WHERE read = 0 AND delivered_at IS NULL AND delivery_contract <> 'audit_only';
       CREATE INDEX IF NOT EXISTS idx_messages_stop_reports
         ON messages(run_id) WHERE id LIKE 'msg\\_stop\\_%' ESCAPE '\\';
+      ${RUN_CONTROL_GUARDS_SQL}
     `)
     reconcileSettledWorkerDispatches(this.db)
     createCoordinatorMailRoutingTrigger.call(this as unknown as OrchestrationDb)

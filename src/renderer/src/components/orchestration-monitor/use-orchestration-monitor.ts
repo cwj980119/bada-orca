@@ -1,3 +1,4 @@
+import { settleMonitorAction } from './settle-monitor-action'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { callRuntimeRpc } from '@/runtime/rpc/calls/runtime-rpc-call'
 import { RuntimeRpcCallError } from '@/runtime/rpc/calls/runtime-rpc-result'
@@ -58,59 +59,62 @@ export function useOrchestrationMonitor() {
       }
       pending = true
       setRefreshing(true)
-      try {
-        for (let offset = 0; offset < ids.length; offset += 3) {
-          await Promise.all(
-            ids.slice(offset, offset + 3).map(async (id) => {
-              if (
-                controller.signal.aborted ||
-                unavailable.has(id) ||
-                !descriptors.find((descriptor) => descriptor.id === id)?.available
-              ) {
-                return
-              }
-              const host = retained.current.get(id)!
-              try {
-                const snapshot = await callRuntimeRpc<OrchestrationMonitorSnapshot>(
-                  host.target,
-                  'orchestration.monitor',
-                  {},
-                  {
-                    signal: controller.signal,
-                    timeoutMs: 15_000,
-                    suppressFeatureInteraction: true
-                  }
-                )
-                if (!controller.signal.aborted) {
-                  retained.current.set(id, { ...host, state: 'ready', snapshot, error: null })
-                }
-              } catch (error) {
-                if (controller.signal.aborted) {
+      await settleMonitorAction(
+        async () => {
+          for (let offset = 0; offset < ids.length; offset += 3) {
+            await Promise.all(
+              ids.slice(offset, offset + 3).map(async (id) => {
+                if (
+                  controller.signal.aborted ||
+                  unavailable.has(id) ||
+                  !descriptors.find((descriptor) => descriptor.id === id)?.available
+                ) {
                   return
                 }
-                const unsupported =
-                  error instanceof RuntimeRpcCallError &&
-                  ['unknown_method', 'method_not_found'].includes(error.code)
-                if (unsupported) {
-                  unavailable.add(id)
+                const host = retained.current.get(id)!
+                try {
+                  const snapshot = await callRuntimeRpc<OrchestrationMonitorSnapshot>(
+                    host.target,
+                    'orchestration.monitor',
+                    {},
+                    {
+                      signal: controller.signal,
+                      timeoutMs: 15_000,
+                      suppressFeatureInteraction: true
+                    }
+                  )
+                  if (!controller.signal.aborted) {
+                    retained.current.set(id, { ...host, state: 'ready', snapshot, error: null })
+                  }
+                } catch (error) {
+                  if (controller.signal.aborted) {
+                    return
+                  }
+                  const unsupported =
+                    error instanceof RuntimeRpcCallError &&
+                    ['unknown_method', 'method_not_found'].includes(error.code)
+                  if (unsupported) {
+                    unavailable.add(id)
+                  }
+                  retained.current.set(id, {
+                    ...host,
+                    state: unsupported ? 'unsupported' : 'error',
+                    error: error instanceof Error ? error.message : String(error)
+                  })
                 }
-                retained.current.set(id, {
-                  ...host,
-                  state: unsupported ? 'unsupported' : 'error',
-                  error: error instanceof Error ? error.message : String(error)
-                })
-              }
-              publish()
-            })
-          )
+                publish()
+              })
+            )
+          }
+        },
+        () => {
+          pending = false
+          if (!controller.signal.aborted) {
+            setRefreshing(false)
+            timer = setTimeout(() => void tick(), 5_000)
+          }
         }
-      } finally {
-        pending = false
-        if (!controller.signal.aborted) {
-          setRefreshing(false)
-          timer = setTimeout(() => void tick(), 5_000)
-        }
-      }
+      )
     }
     const visible = () => {
       clearTimeout(timer)

@@ -1,3 +1,4 @@
+import { settleMonitorAction } from './settle-monitor-action'
 import { useState } from 'react'
 import { callRuntimeRpc } from '@/runtime/rpc/calls/runtime-rpc-call'
 import type {
@@ -22,24 +23,27 @@ export function useMonitorRecovery(
     setPending(action)
     setError(null)
     setResult(null)
-    try {
-      const response = await callRuntimeRpc<MonitorRecoveryResult>(
-        message.host.target,
-        'orchestration.monitorRecover',
-        {
-          id: message.rawId,
-          action,
-          operationId: createStructuredAgentSessionOperationId(createNonSecureContextUuid)
-        },
-        { timeoutMs: 30_000 }
-      )
-      setResult(response.result)
-      onRefresh()
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
-    } finally {
-      setPending(null)
-    }
+    await settleMonitorAction(
+      async () => {
+        try {
+          const response = await callRuntimeRpc<MonitorRecoveryResult>(
+            message.host.target,
+            'orchestration.monitorRecover',
+            {
+              id: message.rawId,
+              action,
+              operationId: createStructuredAgentSessionOperationId(createNonSecureContextUuid)
+            },
+            { timeoutMs: 30_000 }
+          )
+          setResult(response.result)
+          onRefresh()
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : String(cause))
+        }
+      },
+      () => setPending(null)
+    )
   }
   return { pending, error, result, recover }
 }

@@ -1,5 +1,3 @@
-import type Database from '../../../../sqlite/sync-database'
-
 export const RUN_CONTROL_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS orchestration_run_controls (
   run_id TEXT PRIMARY KEY,
@@ -26,8 +24,7 @@ export const DROP_RUN_CONTROL_GUARDS_SQL = `
   DROP TRIGGER IF EXISTS trg_run_reserved_mail_admission;
 `
 
-export function installRunControlGuards(db: Database.Database): void {
-  db.exec(`
+export const RUN_CONTROL_GUARDS_SQL = `
     CREATE TRIGGER IF NOT EXISTS trg_run_controls_delete AFTER DELETE ON runs BEGIN
       DELETE FROM orchestration_run_controls WHERE run_id = OLD.id;
     END;
@@ -49,8 +46,7 @@ export function installRunControlGuards(db: Database.Database): void {
       WHEN EXISTS (SELECT 1 FROM bot_requests WHERE message_id = NEW.id) BEGIN
       ${requestGuard('NEW.run_id')}
     END;
-  `)
-}
+  `
 
 function workerGuard(): string {
   return `

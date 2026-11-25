@@ -53,7 +53,11 @@ function setup() {
     recover: (action: string) =>
       h.call(
         'orchestration.monitorRecover',
-        { id: admission.message.id, action, operationId: mintAgentSessionOperationId(Date.now()) },
+        {
+          id: admission.message.id,
+          action,
+          operationId: mintAgentSessionOperationId(1_795_585_200_000)
+        },
         ctx
       )
   }
@@ -77,7 +81,7 @@ it('refuses cancellation after a delivery reservation without changing its custo
     message_id: id,
     session_id: 'session',
     operation_id: 'attempt',
-    minted_at_ms: Date.now()
+    minted_at_ms: 1_795_585_200_000
   })
   await expect(recover('cancel')).rejects.toThrow()
   expect(db.getMessageById(id)).toMatchObject({ read: 0 })
@@ -111,7 +115,7 @@ it('refuses recovery from an agent CLI', async () => {
   await expect(
     h.call(
       'orchestration.monitorRecover',
-      { id, action: 'cancel', operationId: mintAgentSessionOperationId(Date.now()) },
+      { id, action: 'cancel', operationId: mintAgentSessionOperationId(1_795_585_200_000) },
       { ...ctx, caller: { kind: 'local-cli' } }
     )
   ).rejects.toThrow('Recover bot requests')
