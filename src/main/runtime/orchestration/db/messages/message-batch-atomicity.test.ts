@@ -151,7 +151,7 @@ describe('message batch atomicity', () => {
     `)
 
     expect(() =>
-      db?.commitWorkerDoneMessageMutation(() => {
+      db?.commitMailboxMessageMutation(() => {
         db?.insertMessage({
           runId: 'run_legacy_local',
           id: 'inner',

@@ -196,9 +196,7 @@ export function sendPointToPointMessage(args: {
     markWorkerDoneMutationEffectFree?.()
   }
   const committed =
-    messageType === 'worker_done'
-      ? db.commitWorkerDoneMessageMutation(commitMessage)
-      : commitMessage()
+    messageType === 'worker_done' ? db.commitMailboxMessageMutation(commitMessage) : commitMessage()
   committed.nudge()
   return committed.receipt
 }

@@ -8,7 +8,6 @@ import { structuredMailboxCustody } from '../mailbox/routing/structured-session-
 import { getStructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/host/structured-agent-session-registry'
 import { mintAgentSessionOperationId } from '../mailbox/structured-pointer/structured-pointer-operation-id'
 import { structuredAgentSessionPayloadFingerprint } from '../../../../shared/agent-session/lifecycle/operations/structured-agent-session-mutation'
-import { runLifecycleWriteTransaction } from '../db/lifecycle-write-transaction-runner'
 import { notifyBotRequestOutcome } from '../../rpc/methods/orchestration/messaging/bot-request-outcome'
 import { OrchestrationError } from '../orchestration-error'
 import { createMonitorRead } from './orchestration-monitor-read'
@@ -59,7 +58,7 @@ export function recoverMonitorRequest(
     }
     if (action === 'cancel') {
       const notifications: (() => void)[] = []
-      const cancelled = runLifecycleWriteTransaction(db.db, 'monitor_cancel_request', () => {
+      const cancelled = db.commitMailboxMessageMutation(() => {
         const row = current()
         if (
           row.delivered_at ||

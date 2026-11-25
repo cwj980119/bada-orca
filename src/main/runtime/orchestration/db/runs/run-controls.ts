@@ -6,7 +6,6 @@ import type {
 } from '../../../../../shared/orchestration/orchestration-work-monitor'
 import type { OrchestrationDb } from '../orchestration-db'
 import { OrchestrationError } from '../../orchestration-error'
-import { runLifecycleWriteTransaction } from '../lifecycle-write-transaction-runner'
 
 type ControlRow = {
   revision: number
@@ -49,42 +48,36 @@ export function updateRunControls(
   db: OrchestrationDb,
   params: z.infer<typeof MonitorWorkLimitsParams>
 ): MonitorWorkLimits {
-  const result = runLifecycleWriteTransaction(db.db, 'update_run_controls', () => {
-    const current = readRunControls(db, params.runId)
-    if (
-      db.getRun(params.runId)?.legacy !== 0 ||
-      current.revision !== params.revision ||
-      runIsClosed(db, params.runId)
-    ) {
-      throw new OrchestrationError(
-        'invalid_argument',
-        'This Run changed or has stopped. Refresh before changing its limits.'
-      )
-    }
-    if (params.deadlineAt && Date.parse(params.deadlineAt) <= Date.now()) {
-      throw new OrchestrationError(
-        'invalid_argument',
-        'Choose an execution deadline in the future.'
-      )
-    }
-    db.db
-      .prepare(`INSERT INTO orchestration_run_controls
-      (run_id, revision, max_active_workers, max_bot_requests, deadline_at, updated_at)
-      VALUES (?, 1, ?, ?, ?, ?) ON CONFLICT(run_id) DO UPDATE SET
-      revision = revision + 1, max_active_workers = excluded.max_active_workers,
-      max_bot_requests = excluded.max_bot_requests, deadline_at = excluded.deadline_at,
-      updated_at = excluded.updated_at`)
-      .run(
-        params.runId,
-        params.maxActiveWorkers,
-        params.maxBotRequests,
-        params.deadlineAt,
-        new Date().toISOString()
-      )
-    return readRunControls(db, params.runId)
-  })
+  if (params.deadlineAt && Date.parse(params.deadlineAt) <= Date.now()) {
+    throw new OrchestrationError('invalid_argument', 'Choose an execution deadline in the future.')
+  }
+  const result = db.db
+    .prepare(`INSERT INTO orchestration_run_controls
+    (run_id, revision, max_active_workers, max_bot_requests, deadline_at, updated_at)
+    SELECT r.id, 1, ?, ?, ?, ? FROM runs r WHERE r.id = ? AND r.legacy = 0
+    AND (? = 0 OR EXISTS (SELECT 1 FROM orchestration_run_controls c WHERE c.run_id = r.id))
+    ON CONFLICT(run_id) DO UPDATE SET revision = revision + 1,
+      max_active_workers = excluded.max_active_workers, max_bot_requests = excluded.max_bot_requests,
+      deadline_at = excluded.deadline_at, updated_at = excluded.updated_at
+    WHERE orchestration_run_controls.revision = ? AND stopped_at IS NULL
+      AND (deadline_at IS NULL OR julianday(deadline_at) > julianday('now'))`)
+    .run(
+      params.maxActiveWorkers,
+      params.maxBotRequests,
+      params.deadlineAt,
+      new Date().toISOString(),
+      params.runId,
+      params.revision,
+      params.revision
+    )
+  if (Number(result.changes) !== 1) {
+    throw new OrchestrationError(
+      'invalid_argument',
+      'This Run changed or has stopped. Refresh before changing its limits.'
+    )
+  }
   db.runControlChanged?.()
-  return result
+  return readRunControls(db, params.runId)
 }
 
 export function fenceRun(db: OrchestrationDb, runId: string, reason: 'user' | 'deadline'): void {

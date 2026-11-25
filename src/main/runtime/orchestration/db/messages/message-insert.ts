@@ -13,7 +13,7 @@ import { ORCHESTRATION_UNBOUND_RUN_ID as UNBOUND_RUN_ID } from '../../../../../s
 import { MESSAGE_COLUMN_LIST } from '../row-column-lists'
 
 const MESSAGE_INSERT_SAVEPOINT = 'message_insert_batch'
-const WORKER_DONE_MESSAGE_SAVEPOINT = 'worker_done_message_commit'
+const MAILBOX_MESSAGE_SAVEPOINT = 'mailbox_message_commit'
 
 export type MessageInsert = {
   id?: string
@@ -107,20 +107,20 @@ export function insertMessages(this: OrchestrationDb, messages: MessageInsert[])
   }
 }
 
-export function commitWorkerDoneMessageMutation<T>(this: OrchestrationDb, mutation: () => T): T {
-  return runLifecycleWriteTransaction(this.db, WORKER_DONE_MESSAGE_SAVEPOINT, mutation)
+export function commitMailboxMessageMutation<T>(this: OrchestrationDb, mutation: () => T): T {
+  return runLifecycleWriteTransaction(this.db, MAILBOX_MESSAGE_SAVEPOINT, mutation)
 }
 
 export type MessageInsertMethods = {
   insertMessage: typeof insertMessage
   insertMessages: typeof insertMessages
-  commitWorkerDoneMessageMutation: typeof commitWorkerDoneMessageMutation
+  commitMailboxMessageMutation: typeof commitMailboxMessageMutation
 }
 
 export function attachMessageInsert(ctor: { prototype: object }): void {
   Object.assign(ctor.prototype, {
     insertMessage,
     insertMessages,
-    commitWorkerDoneMessageMutation
+    commitMailboxMessageMutation
   })
 }
