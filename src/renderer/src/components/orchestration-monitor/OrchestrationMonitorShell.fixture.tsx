@@ -79,5 +79,13 @@ export const shellConversations = defineFixture({
   }
 })
 
-export const mediumShellConversations = defineFixture({ ...shellConversations, width: 960 })
-export const narrowShellConversations = defineFixture({ ...shellConversations, width: 420 })
+export const mediumShellConversations = defineFixture({
+  ...shellConversations,
+  width: 960,
+  store: { ...shellConversations.store, rightSidebarOpen: false }
+})
+export const narrowShellConversations = defineFixture({
+  ...shellConversations,
+  width: 420,
+  store: { ...shellConversations.store, sidebarOpen: false, rightSidebarOpen: false }
+})

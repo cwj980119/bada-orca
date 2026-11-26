@@ -61,12 +61,12 @@ export function MonitorConversations({
       className="@container/conversations h-[640px] w-full min-w-0 overflow-hidden rounded-xl border bg-card text-card-foreground"
       aria-label={t('orchestrationMonitor.conversations', 'Conversations')}
     >
-      <div className="grid h-full min-w-0 @min-[700px]/conversations:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="grid h-full min-w-0 @min-[480px]/conversations:grid-cols-[192px_minmax(0,1fr)] @min-[700px]/conversations:grid-cols-[240px_minmax(0,1fr)]">
         <nav
           aria-label={t('orchestrationMonitor.conversations', 'Conversations')}
           className={cn(
             'scrollbar-sleek min-h-0 overflow-y-auto border-r',
-            mobileOpen && '@max-[700px]/conversations:hidden'
+            mobileOpen && '@max-[480px]/conversations:hidden'
           )}
         >
           <h2 className="border-b px-4 py-3 text-sm font-semibold">
@@ -127,14 +127,14 @@ export function MonitorConversations({
         <div
           className={cn(
             'min-h-0 min-w-0 flex-col',
-            mobileOpen ? 'flex' : 'hidden @min-[700px]/conversations:flex'
+            mobileOpen ? 'flex' : 'hidden @min-[480px]/conversations:flex'
           )}
         >
           <header className="flex items-center gap-2 border-b px-4 py-3">
             <Button
               variant="ghost"
               size="icon"
-              className="shrink-0 @min-[700px]/conversations:hidden"
+              className="shrink-0 @min-[480px]/conversations:hidden"
               aria-label={t('orchestrationMonitor.conversations', 'Conversations')}
               onClick={() => setMobileOpen(false)}
             >

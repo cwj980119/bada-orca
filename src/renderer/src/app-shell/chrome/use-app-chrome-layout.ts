@@ -63,12 +63,9 @@ export function useAppChromeLayout() {
   const creationLayoutActive = useAppStore(selectWorktreeCreationSurfaceShown)
   const workspaceChromeActive =
     activeView === 'terminal' && hasActiveWorktree && !creationLayoutActive
-  // Standalone pages own their navigation and use the full window.
+  // Activity/Space own full pages and hide the workspace sidebar.
   const showSidebar =
-    activeView !== 'settings' &&
-    activeView !== 'activity' &&
-    activeView !== 'space' &&
-    activeView !== 'orchestration'
+    activeView !== 'settings' && activeView !== 'activity' && activeView !== 'space'
   // Tasks/Landing keep sidebar-width chrome when open; creation suppresses stacked chrome.
   const stackedSidebarOpen =
     !workspaceChromeActive && !creationLayoutActive && showSidebar && sidebarOpen
