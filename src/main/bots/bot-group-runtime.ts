@@ -15,6 +15,7 @@ import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { isBotGroupMemberSession } from '../../shared/bots/bot-group'
 import { folderWorkspaceKey } from '../../shared/workspace/identity/workspace-scope'
 import { BotGroupStore } from './bot-group-store'
+import { BotGroupDeliveryQueue } from './bot-group-delivery-queue'
 import { migrateBotGroupHomes } from './bot-group-home-migration'
 import {
   createBotGroup,
@@ -133,6 +134,7 @@ export class BotGroupRuntime {
   readonly queues = new Map<string, Promise<void>>()
   /** Operations whose native admission is in flight. */
   readonly deliveries = new Set<string>()
+  readonly deliveryQueue = new BotGroupDeliveryQueue()
 
   constructor(readonly runtime: OrcaRuntimeService) {
     this.store = new BotGroupStore(runtime.getOrchestrationDb().db)

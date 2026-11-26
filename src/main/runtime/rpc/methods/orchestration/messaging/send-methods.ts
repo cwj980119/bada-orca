@@ -24,6 +24,7 @@ import { prepareSessionRecipient } from './session-recipient'
 import { withDispatchPrefixHint } from './dispatch-prefix-hint'
 import { sendPointToPointMessage } from './send-point-to-point'
 import { sendGroupMessage } from './send-group'
+import { sendBotGroupMail } from './send-bot-group'
 import { sendFederatedControlMail } from '../../../../orchestration/legacy-remote-home/send-control-mail'
 import { orchestrationCallerIdentity } from '../runs/run-scope'
 import { assertLifecycleCallerIsNotAnotherParty } from './lifecycle-caller-fence'
@@ -76,6 +77,9 @@ export const ORCHESTRATION_SEND_METHODS = [
         paneKey: attestedCaller?.paneKey ?? runtime.getTerminalPaneKey(from)
       })
       const senderPaneKey = sender.paneKey ?? undefined
+      if (params.to?.startsWith('group:')) {
+        return sendBotGroupMail(context, params, sender)
+      }
       // Why: a session caller was already bound to its own identity at the dispatch entry.
       if (isDispatchMutationMessageType(params.type) && !orchestrationCaller) {
         assertLifecycleCallerIsNotAnotherParty(runtime, {
