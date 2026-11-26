@@ -77,7 +77,12 @@ export function reduceBotGroupTranscript(
           group,
           cursor: page.cursor,
           hasMoreChanges: page.hasMoreChanges,
-          messages: upsert(current.messages, page.messages)
+          messages: upsert(
+            current.messages,
+            page.messages.filter(
+              (message) => message.sequence >= (current.messages[0]?.sequence ?? 0)
+            )
+          )
         }
       }
       // Older pages stay only while they still join the new page and no member left, since leaving rewrites their turns.

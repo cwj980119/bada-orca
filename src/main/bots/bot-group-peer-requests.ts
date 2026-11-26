@@ -10,7 +10,7 @@ import type { StructuredMailboxPointerHost } from '../runtime/orchestration/mail
 import { getStructuredAgentSessionHost } from '../native-chat/agent-session-wire/host/structured-agent-session-registry'
 import { requireStructuredHost } from './bot-chat-session'
 import type { BotGroupRuntime } from './bot-group-runtime'
-import { assertGroupRequestBudget } from './bot-group-request-budget'
+import { assertGroupRequestBudget, consumeGroupRequestBudget } from './bot-group-request-budget'
 
 export type GroupPeerScope = NonNullable<Awaited<ReturnType<typeof groupPeerScope>>>
 
@@ -144,7 +144,12 @@ export function narrowGroupMailBatch<
   for (const mail of messages) {
     const root = mailRoot(groups, found.member, mail)
     if (root && rootActive(found.group, found.member, root)) {
-      live.push({ mail, root })
+      try {
+        assertGroupRequestBudget(groups, root.rootRequestId)
+        live.push({ mail, root })
+      } catch {
+        ended.push(mail.id)
+      }
     } else if (root) {
       ended.push(mail.id)
     }
@@ -214,35 +219,38 @@ export function reserveGroupMailTurn(
   const told = mails.every((mail) => mail.type === 'status')
   const answeredBy =
     asker && first.targetSessionId !== member.sessionId ? botOf(first.targetSessionId) : undefined
-  groups.store.append({
-    id,
-    groupId: group.id,
-    ...(threadId ? { threadId } : {}),
-    author: { kind: 'bot', id: bot.id, name: bot.name },
-    // Room history for the other members; the room line itself renders from the fields below.
-    text: requester
-      ? `${requester.name} ${told ? 'told' : 'asked'} ${bot.name}`
-      : answeredBy
-        ? `${bot.name} read ${answeredBy.name}'s reply`
-        : `${bot.name} followed up`,
-    createdAt: Date.now(),
-    rootRequestId: first.rootRequestId,
-    rootSequence: first.rootSequence,
-    ...(requester
-      ? { requester: { id: requester.id, name: requester.name, ...(told ? { told: true } : {}) } }
-      : {}),
-    ...(answeredBy ? { answeredBy: { id: answeredBy.id, name: answeredBy.name } } : {}),
-    turns: [
-      {
-        operationId: input.operationId,
-        botId: bot.id,
-        botName: bot.name,
-        avatar: bot.avatar,
-        agent: bot.agent,
-        sessionId: member.sessionId,
-        mailbox: true
-      }
-    ]
+  groups.store.transaction(() => {
+    consumeGroupRequestBudget(groups, first.rootRequestId)
+    groups.store.append({
+      id,
+      groupId: group.id,
+      ...(threadId ? { threadId } : {}),
+      author: { kind: 'bot', id: bot.id, name: bot.name },
+      // Room history for the other members; the room line itself renders from the fields below.
+      text: requester
+        ? `${requester.name} ${told ? 'told' : 'asked'} ${bot.name}`
+        : answeredBy
+          ? `${bot.name} read ${answeredBy.name}'s reply`
+          : `${bot.name} followed up`,
+      createdAt: Date.now(),
+      rootRequestId: first.rootRequestId,
+      rootSequence: first.rootSequence,
+      ...(requester
+        ? { requester: { id: requester.id, name: requester.name, ...(told ? { told: true } : {}) } }
+        : {}),
+      ...(answeredBy ? { answeredBy: { id: answeredBy.id, name: answeredBy.name } } : {}),
+      turns: [
+        {
+          operationId: input.operationId,
+          botId: bot.id,
+          botName: bot.name,
+          avatar: bot.avatar,
+          agent: bot.agent,
+          sessionId: member.sessionId,
+          mailbox: true
+        }
+      ]
+    })
   })
   groups.changed()
 }

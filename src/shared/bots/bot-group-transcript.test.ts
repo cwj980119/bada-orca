@@ -34,6 +34,17 @@ const ids = (transcript: BotGroupTranscript | null) =>
   transcript?.messages.map((entry) => entry.sequence)
 
 describe('room transcript', () => {
+  it('keeps earlier pagination contiguous when an unloaded old post changes', () => {
+    const current = { ...page([3, 4], { hasEarlier: true }), cursor: 4 }
+    const next = reduceBotGroupTranscript(current, {
+      kind: 'recent',
+      page: { ...page([1, 5]), delta: true, cursor: 6 }
+    })
+    expect(next?.messages.map((message) => message.text)).toEqual(['m3', 'm4', 'm5'])
+    expect(next?.hasEarlier).toBe(true)
+    const earlier = reduceBotGroupTranscript(next, { kind: 'earlier', page: page([1, 2]) })
+    expect(earlier?.messages.map((message) => message.text)).toEqual(['m1', 'm2', 'm3', 'm4', 'm5'])
+  })
   it('merges changed older posts without dropping loaded history or accepting an older cursor', () => {
     const current = { ...page([1, 2, 3], { hasEarlier: true }), cursor: 3 }
     const next = reduceBotGroupTranscript(current, {

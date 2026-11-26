@@ -1,6 +1,5 @@
 import { expect, it, vi } from 'vitest'
 import { fixture, groupNativeMocks } from './bot-group-native-runtime.test-fixture'
-import { BotGroupRuntime } from './bot-group-runtime'
 
 const mocks = groupNativeMocks()
 async function pending() {
@@ -30,7 +29,7 @@ async function pending() {
   return { ...setup, group }
 }
 it('retains a failed delivery across restart and retries the same operation', async () => {
-  const { groups, group, runtime } = await pending()
+  const { groups, group, newRuntime } = await pending()
   mocks.send.mockRejectedValueOnce(new Error('Connection interrupted'))
   groups.resumePending()
   await vi.waitFor(() => expect(groups.store.message('recover')?.turns[0]?.retryable).toBe(true))
@@ -40,13 +39,13 @@ it('retains a failed delivery across restart and retries the same operation', as
     delivered.push(input.turn.operationId)
     return { kind: 'sent' }
   })
-  new BotGroupRuntime(runtime).retry(group.id, 'recover-op')
+  newRuntime().retry(group.id, 'recover-op')
   await vi.waitFor(() => expect(groups.store.pending()).toEqual([]))
   expect(delivered).toEqual(['recover-op'])
   expect(groups.store.message('recover')?.turns[0]?.error).toBeUndefined()
 })
 it('reconciles a timeout that was already admitted without delivering another turn', async () => {
-  const { groups, runtime } = await pending()
+  const { groups, newRuntime } = await pending()
   mocks.snapshot.mockImplementation(async () => ({
     submissions: [{ clientMessageId: 'recover-op' }],
     items: []
@@ -56,7 +55,7 @@ it('reconciles a timeout that was already admitted without delivering another tu
     delivered.push(input.turn.operationId)
     return { kind: 'sent' }
   })
-  new BotGroupRuntime(runtime).resumePending()
+  newRuntime().resumePending()
   await vi.waitFor(() => expect(groups.store.pending()).toEqual([]))
   expect(delivered).toEqual([])
 })
@@ -114,4 +113,23 @@ it('lets healthy members progress while preserving failed member order through r
   groups.retry(group.id, 'recover-op')
   await vi.waitFor(() => expect(groups.store.pending()).toEqual([]))
   expect(delivered).toEqual(['healthy', 'recovered', 'later'])
+})
+
+it('automatically recovers a transient interruption with the reserved operation', async () => {
+  const { groups } = await pending()
+  const message = groups.store.message('recover')!
+  groups.store.update({
+    ...message,
+    turns: message.turns.map((turn) => ({ ...turn, deliveryAttempts: 0 }))
+  })
+  const delivered: string[] = []
+  mocks.send
+    .mockRejectedValueOnce(new Error('Temporary disconnect'))
+    .mockImplementation(async (input) => {
+      delivered.push(input.turn.operationId)
+      return { kind: 'sent' }
+    })
+  groups.resumePending()
+  await vi.waitFor(() => expect(groups.store.pending()).toEqual([]), { timeout: 5000 })
+  expect(delivered).toEqual(['recover-op'])
 })

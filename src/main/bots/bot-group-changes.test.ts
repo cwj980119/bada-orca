@@ -13,7 +13,7 @@ describe('group room changes', () => {
       createdAt: 1,
       turns: []
     })
-    const initial = groups.read(group.id)
+    const initial = await groups.read(group.id)
     const { threadId } = await groups.newThread(group.id)
     groups.store.append({
       id: 'thread-post',
@@ -33,7 +33,7 @@ describe('group room changes', () => {
       createdAt: 3,
       turns: []
     })
-    const changed = groups.read(group.id, undefined, undefined, {
+    const changed = await groups.read(group.id, undefined, undefined, {
       afterChange: initial.cursor,
       revision: group.revision
     })
@@ -43,19 +43,21 @@ describe('group room changes', () => {
       { id: 'follow-up', text: 'Ship it' }
     ])
     expect(
-      groups.read(group.id, undefined, undefined, {
-        afterChange: changed.cursor,
-        revision: group.revision
-      }).messages
+      (
+        await groups.read(group.id, undefined, undefined, {
+          afterChange: changed.cursor,
+          revision: group.revision
+        })
+      ).messages
     ).toEqual([])
   })
 
   it('resets a stale membership cursor instead of retaining a removed member history', async () => {
     const { groups } = fixture()
     const group = await groups.create({ name: 'Review', botIds: ['bot-0', 'bot-1'] })
-    const initial = groups.read(group.id)
+    const initial = await groups.read(group.id)
     await groups.update({ groupId: group.id, revision: group.revision, botIds: ['bot-1'] })
-    const changed = groups.read(group.id, undefined, undefined, {
+    const changed = await groups.read(group.id, undefined, undefined, {
       afterChange: initial.cursor,
       revision: group.revision
     })
@@ -80,6 +82,6 @@ describe('group room changes', () => {
       })
     ).toThrow('Admission refused')
     expect(groups.store.message('rejected')).toBeNull()
-    expect(groups.read(group.id).cursor).toBe(0)
+    expect((await groups.read(group.id)).cursor).toBe(0)
   })
 })

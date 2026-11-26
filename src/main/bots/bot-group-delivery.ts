@@ -69,6 +69,7 @@ export async function sendBotGroupMessage(
         ...(input.threadId ? { threadId: input.threadId } : {}),
         author: { kind: 'owner' },
         text: input.text,
+        groupName: group.name,
         createdAt: Date.now(),
         deadlineAt: Date.now() + (input.timeoutMs ?? 900_000),
         peerTurnLimit: input.maxPeerTurns ?? 32,
@@ -192,6 +193,9 @@ export function resumePendingGroupDeliveries(groups: BotGroupRuntime): void {
     return
   }
   for (const { message, turn } of groups.store.pending()) {
+    if (turn.error || turn.retryAt !== undefined) {
+      groups.deliveryQueue.hold(turn.sessionId, turn.operationId)
+    }
     if ((turn.deliveryAttempts ?? 0) >= 3) {
       groups.deliveryQueue.hold(turn.sessionId, turn.operationId)
       continue

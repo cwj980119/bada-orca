@@ -1,4 +1,5 @@
-import { readBotGroup } from './bot-group-read'
+import { BotsDbWorkerClient } from './db-worker/bots-db-worker-client'
+import type { BotGroupTranscript } from '../../shared/bots/bot-group-transcript'
 import type { z } from 'zod'
 import { runIsClosed } from '../runtime/orchestration/db/runs/run-controls'
 import type {
@@ -45,6 +46,7 @@ import {
 import type { MessageRow } from '../runtime/orchestration/db/orchestration-records'
 
 const runtimes = new WeakMap<OrcaRuntimeService, BotGroupRuntime>()
+const groupReads = new BotsDbWorkerClient()
 const recoveryWatches = new WeakMap<OrcaRuntimeService, () => void>()
 export function runtimeBotGroups(runtime: OrcaRuntimeService): BotGroupRuntime {
   let groups = runtimes.get(runtime)
@@ -153,7 +155,18 @@ export class BotGroupRuntime {
   readonly deliveryQueue = new BotGroupDeliveryQueue()
   readonly retrySchedule = new BotGroupRetrySchedule()
 
-  constructor(readonly runtime: OrcaRuntimeService) {
+  constructor(
+    readonly runtime: OrcaRuntimeService,
+    private readonly readRoom: (
+      input: z.infer<typeof BotGroupRead>
+    ) => Promise<BotGroupTranscript> = async (input) => {
+      const result = await groupReads.call('groups', runtime.getOrchestrationDb().dbPath, 'read', [
+        input
+      ])
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the groups.read worker operation returns the same transcript contract as readBotGroup.
+      return result as BotGroupTranscript
+    }
+  ) {
     this.store = new BotGroupStore(runtime.getOrchestrationDb().db)
   }
 
@@ -172,7 +185,7 @@ export class BotGroupRuntime {
     beforeSequence?: number,
     threadId?: string,
     changes?: Pick<z.infer<typeof BotGroupRead>, 'afterChange' | 'revision'>
-  ) => readBotGroup(this, groupId, beforeSequence, threadId, changes)
+  ) => this.readRoom({ groupId, beforeSequence, threadId, ...changes })
   stop = (groupId: string, botId?: string, threadId?: string) =>
     stopBotGroup(this, groupId, botId, threadId)
   resumePending = () => resumePendingGroupDeliveries(this)

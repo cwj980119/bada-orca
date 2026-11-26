@@ -78,6 +78,7 @@ export function BotGroupChat({
 
   const [error, setError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
+  const pendingSend = useRef<{ text: string; id: string } | null>(null)
   const [sessions, setSessions] = useState<ReadonlyMap<string, BotGroupSession>>(() => new Map())
   const report = useCallback(
     (sessionId: string, session: BotGroupSession | null) =>
@@ -257,6 +258,9 @@ export function BotGroupChat({
         return false
       }
       setSending(true)
+      if (pendingSend.current?.text !== text) {
+        pendingSend.current = { text, id: createBrowserUuid() }
+      }
       try {
         const { message } = await callBotRpc<{ message: BotGroupMessage }>(
           group,
@@ -265,17 +269,15 @@ export function BotGroupChat({
             groupId: group.id,
             threadId,
             revision: group.revision,
-            messageId: createBrowserUuid(),
+            messageId: pendingSend.current.id,
             text
           }
         )
         apply({ kind: 'sent', message })
+        pendingSend.current = null
         follow.jumpToLatest()
         setError(null)
         return true
-      } catch (error) {
-        setError(error instanceof Error ? error.message : String(error))
-        return false
       } finally {
         setSending(false)
       }

@@ -1,23 +1,24 @@
 import type { z } from 'zod'
 import type { BotGroupRead, BotGroupMessage } from '../../shared/bots/bot-group'
-import type { BotGroupRuntime } from './bot-group-runtime'
+import type { BotGroupStore } from './bot-group-store'
+import type { BotGroupMessageChanges } from './bot-group-message-changes'
 
 /** One room's latest page; its `group` carries that room's member sessions. */
 export function readBotGroup(
-  groups: BotGroupRuntime,
+  groups: { store: BotGroupStore; changes: BotGroupMessageChanges },
   groupId: string,
   beforeSequence?: number,
   threadId?: string,
   changes?: Pick<z.infer<typeof BotGroupRead>, 'afterChange' | 'revision'>
 ) {
   const group = groups.store.room(groupId, threadId)
-  const cursor = groups.store.changes.cursor(groupId, threadId)
+  const cursor = groups.changes.cursor(groupId, threadId)
   if (
     changes?.afterChange !== undefined &&
     changes.revision === group.revision &&
     changes.afterChange <= cursor
   ) {
-    const page = groups.store.changes.read(groupId, threadId, changes.afterChange)
+    const page = groups.changes.read(groupId, threadId, changes.afterChange)
     return {
       group,
       ...page,

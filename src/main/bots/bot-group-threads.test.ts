@@ -43,10 +43,10 @@ describe('group threads', () => {
     await expect.poll(() => mocks.send.mock.calls.length).toBe(2)
     expect(mocks.send.mock.calls.map(([send]) => send.sessionId)).toEqual(threadSessions)
 
-    expect(groups.read(group.id).messages.map((message) => message.text)).toEqual([
+    expect((await groups.read(group.id)).messages.map((message) => message.text)).toEqual([
       'Main room plan'
     ])
-    const thread = groups.read(group.id, undefined, threadId)
+    const thread = await groups.read(group.id, undefined, threadId)
     expect(thread.messages.map((message) => message.text)).toEqual(['Release notes\nfor 1.4'])
     expect(thread.group.members.map((member) => member.sessionId)).toEqual(threadSessions)
     expect(groups.store.get(group.id).threads?.[0]?.title).toBe('Release notes for 1.4')

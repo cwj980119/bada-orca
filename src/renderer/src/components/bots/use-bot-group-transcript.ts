@@ -1,23 +1,25 @@
 import { useEffect, useReducer } from 'react'
 import { onBotsChanged } from '@/lib/bots-changed-window-event'
 import { callBotRpc, type BotRef } from '@/lib/bot-hosts'
+import { stampBotGroupHosts } from '@/lib/bot-group-catalog-snapshot'
 import {
   reduceBotGroupTranscript,
   type BotGroupTranscript
 } from '../../../../shared/bots/bot-group-transcript'
 
-function readPage(
+async function readPage(
   group: BotRef,
   threadId: string | undefined,
   beforeSequence?: number,
   changes?: { afterChange?: number; revision?: number }
 ): Promise<BotGroupTranscript> {
-  return callBotRpc(group, 'bots.groups.read', {
+  const page = await callBotRpc<BotGroupTranscript>(group, 'bots.groups.read', {
     groupId: group.id,
     threadId,
     beforeSequence,
     ...changes
   })
+  return { ...page, group: stampBotGroupHosts(group.hostId, [page.group])[0]! }
 }
 
 export function useBotGroupTranscript(
@@ -51,7 +53,7 @@ export function useBotGroupTranscript(
           apply({ kind: 'recent', page })
           cursor = page.cursor
           revision = page.group.revision
-          dirty ||= page.hasMoreChanges === true
+          dirty = dirty || page.hasMoreChanges === true
           setError(null)
         }
       } catch (error) {

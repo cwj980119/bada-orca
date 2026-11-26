@@ -1,4 +1,4 @@
-import { BotGroupMessageChanges } from './bot-group-message-changes'
+import { BOT_GROUP_CHANGES_SQL } from './bot-group-changes-sql'
 import {
   BotGroupLatestSchema,
   BotGroupSchema,
@@ -22,8 +22,6 @@ const MessageRecordSchema = BotGroupMessageSchema.omit({ sequence: true })
 export type PendingGroupTurn = { message: BotGroupMessage; turn: BotGroupTurn }
 
 export class BotGroupStore {
-  readonly changes: BotGroupMessageChanges
-
   constructor(private readonly db: Database) {
     db.exec(`CREATE TABLE IF NOT EXISTS bot_groups (id TEXT PRIMARY KEY, record TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS bot_group_messages (
@@ -34,13 +32,11 @@ export class BotGroupStore {
       CREATE TABLE IF NOT EXISTS bot_group_worker_operations (dispatch_id TEXT PRIMARY KEY, operation_id TEXT NOT NULL);
       CREATE INDEX IF NOT EXISTS bot_group_worker_operation ON bot_group_worker_operations(operation_id);
       CREATE INDEX IF NOT EXISTS bot_group_messages_room ON bot_group_messages(group_id, sequence);
-      CREATE INDEX IF NOT EXISTS bot_group_request_turns
-        ON bot_group_messages(group_id, json_extract(record, '$.rootRequestId'));
       -- Same expression as roomMessages, so a room page reads only its own thread's rows; any build's writes keep it current.
       CREATE INDEX IF NOT EXISTS bot_group_messages_thread
         ON bot_group_messages(group_id, coalesce(json_extract(record, '$.threadId'), ''), sequence);
-      CREATE TABLE IF NOT EXISTS bot_group_sidebar (group_id TEXT PRIMARY KEY, sidebar_order INTEGER, latest TEXT);`)
-    this.changes = new BotGroupMessageChanges(db, (row) => this.messageRow(row))
+      CREATE TABLE IF NOT EXISTS bot_group_sidebar (group_id TEXT PRIMARY KEY, sidebar_order INTEGER, latest TEXT);
+      ${BOT_GROUP_CHANGES_SQL}`)
   }
 
   /** Groups saved with a home; one still to migrate is listed once it has one. */
@@ -314,7 +310,7 @@ export class BotGroupStore {
       .run(JSON.stringify({ ...message, turns }), message.id, message.groupId)
   }
 
-  private messageRow(row: Record<string, unknown>): BotGroupMessage {
+  messageRow(row: Record<string, unknown>): BotGroupMessage {
     const message = MessageRecordSchema.parse(JSON.parse(String(row.record)))
     const workers = this.db.prepare(
       'SELECT dispatch_id FROM bot_group_worker_operations WHERE operation_id = ? ORDER BY rowid'

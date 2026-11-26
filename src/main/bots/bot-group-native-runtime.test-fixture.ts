@@ -4,6 +4,9 @@ import Database from '../sqlite/sync-database'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { makeTestBot } from './bot.test-fixture'
 import { BotGroupRuntime } from './bot-group-runtime'
+import { BotGroupStore } from './bot-group-store'
+import { BotGroupMessageChanges } from './bot-group-message-changes'
+import { readBotGroup } from './bot-group-read'
 const mocks = vi.hoisted(() => ({
   send: vi.fn(),
   snapshot: vi.fn(),
@@ -92,6 +95,13 @@ export function fixture() {
   }
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: native adapters are mocked and this fixture supplies every runtime member reached by the group service.
   const runtime = partialRuntime as unknown as OrcaRuntimeService
+  const newRuntime = () => {
+    const store = new BotGroupStore(db)
+    const changes = new BotGroupMessageChanges(db, (row) => store.messageRow(row))
+    return new BotGroupRuntime(runtime, async (input) =>
+      readBotGroup({ store, changes }, input.groupId, input.beforeSequence, input.threadId, input)
+    )
+  }
   return {
     db,
     runtime,
@@ -100,7 +110,8 @@ export function fixture() {
     requests,
     markAsDelivered,
     homes,
-    groups: new BotGroupRuntime(runtime)
+    groups: newRuntime(),
+    newRuntime
   }
 }
 beforeEach(() => {

@@ -12,7 +12,10 @@ let groups: readonly BotGroup[] = []
 const listeners = new Set<() => void>()
 
 /** Every group names the host that listed it; a host stores `local` for its own groups. */
-function stamp(hostId: ExecutionHostId, next: readonly BotGroup[]): readonly BotGroup[] {
+export function stampBotGroupHosts(
+  hostId: ExecutionHostId,
+  next: readonly BotGroup[]
+): readonly BotGroup[] {
   return next.every((group) => group.hostId === hostId)
     ? next
     : // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the stored type names only the host's own `local`; the listing host is the truth here.
@@ -33,7 +36,7 @@ export function publishBotGroups(
   next: readonly BotGroup[],
   hostId: ExecutionHostId = LOCAL_EXECUTION_HOST_ID
 ): void {
-  byHost.set(hostId, stamp(hostId, next))
+  byHost.set(hostId, stampBotGroupHosts(hostId, next))
   if (hostId !== LOCAL_EXECUTION_HOST_ID) {
     keepBotHostList(hostId, { groups: next })
   }
@@ -55,7 +58,7 @@ export function retainListedBotGroupHosts(): void {
     byHost.delete(hostId)
   }
   for (const [hostId, groups] of seeded) {
-    byHost.set(hostId, stamp(hostId, groups))
+    byHost.set(hostId, stampBotGroupHosts(hostId, groups))
   }
   reflatten()
 }

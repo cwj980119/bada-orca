@@ -1,5 +1,6 @@
 import { translate } from '@/i18n/i18n'
 import { callBotRpc } from '@/lib/bot-hosts'
+import { stampBotGroupHosts } from '@/lib/bot-group-catalog-snapshot'
 import { useTranslate } from '@/i18n/use-translate'
 import { useState } from 'react'
 import { ChevronDown, Check } from 'lucide-react'
@@ -43,7 +44,7 @@ export function BotGroupReplyPicker({
         replyMode
       })
       // The host's bots-changed refreshes the catalog; the room takes the result now so its next send carries the new revision.
-      onChange(result.group)
+      onChange(stampBotGroupHosts(group.hostId, [result.group])[0]!)
       setOpen(false)
     } catch (error) {
       toast.error(String(error))

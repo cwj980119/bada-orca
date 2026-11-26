@@ -4,6 +4,7 @@ import type { BotGroup } from '../../../shared/bots/bot-group'
 import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
 import { callRuntimeRpc } from '@/runtime/rpc/calls/runtime-rpc-call'
 import { onBotsChanged } from './bots-changed-window-event'
+import { createCoalescingKeyedRunner } from '../../../shared/concurrency/coalescing-keyed-runner'
 import { botHostTarget, forEachBotHost } from './bot-hosts'
 import {
   publishBotGroups,
@@ -13,18 +14,21 @@ import {
 
 let watchers = 0
 const requests = new Map<ExecutionHostId, number>()
+const refreshHost = createCoalescingKeyedRunner<void>()
 
 /** Re-reads one host's groups; a slower earlier read never undoes a later one. */
 export async function refreshBotHostGroups(hostId: ExecutionHostId): Promise<void> {
   const revision = (requests.get(hostId) ?? 0) + 1
   requests.set(hostId, revision)
-  const result = await callRuntimeRpc<{ groups: BotGroup[] }>(
-    botHostTarget(hostId),
-    'bots.groups.list'
-  )
-  if (revision === requests.get(hostId)) {
-    publishBotGroups(result.groups, hostId)
-  }
+  return refreshHost(hostId, 'groups', async () => {
+    const result = await callRuntimeRpc<{ groups: BotGroup[] }>(
+      botHostTarget(hostId),
+      'bots.groups.list'
+    )
+    if (revision === requests.get(hostId)) {
+      publishBotGroups(result.groups, hostId)
+    }
+  })
 }
 
 /** Re-reads every listed host's groups. */

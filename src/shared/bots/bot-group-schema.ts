@@ -83,6 +83,7 @@ const BotGroupTurnSchema = z.object({
 export const BotGroupMessageSchema = z.object({
   id: z.string().min(1),
   groupId: z.string().min(1),
+  groupName: z.string().optional(),
   /** The thread it was posted in; absent in the original room. */
   threadId: z.string().min(1).optional(),
   sequence: z.number().int().nonnegative(),
@@ -96,6 +97,7 @@ export const BotGroupMessageSchema = z.object({
   rootSequence: z.number().optional(),
   deadlineAt: z.number().optional(),
   peerTurnLimit: z.number().int().nonnegative().optional(),
+  peerTurnsUsed: z.number().int().nonnegative().optional(),
   /** The member whose explicit peer request this mail turn answers; `told` when it was only status. */
   requester: z
     .object({ id: z.string(), name: z.string(), told: z.literal(true).optional() })

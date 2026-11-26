@@ -10,17 +10,18 @@ export function assertGroupRequestBudget(groups: BotGroupRuntime, rootId: string
     throw new Error('This group conversation expired. Send a new human message to continue.')
   }
   if (root.peerTurnLimit !== undefined) {
-    const row = groups.runtime
-      .getOrchestrationDb()
-      .db.prepare(
-        `SELECT count(*) AS total FROM bot_group_messages
-       WHERE group_id = ? AND json_extract(record, '$.rootRequestId') = ?`
-      )
-      .get(root.groupId, rootId)
-    if (Number(row?.total ?? 0) >= root.peerTurnLimit) {
+    if ((root.peerTurnsUsed ?? 0) >= root.peerTurnLimit) {
       throw new Error(
         'This group conversation reached its peer delivery limit. Send a new human message to continue.'
       )
     }
+  }
+}
+
+export function consumeGroupRequestBudget(groups: BotGroupRuntime, rootId: string): void {
+  assertGroupRequestBudget(groups, rootId)
+  const root = groups.store.message(rootId)
+  if (root?.peerTurnLimit !== undefined) {
+    groups.store.update({ ...root, peerTurnsUsed: (root.peerTurnsUsed ?? 0) + 1 })
   }
 }

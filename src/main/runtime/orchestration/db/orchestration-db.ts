@@ -53,7 +53,7 @@ class OrchestrationDbCore {
   runControlChanged: (() => void) | undefined
   runControlClosed: (() => void) | undefined
 
-  constructor(dbPath: (string & {}) | ':memory:') {
+  constructor(readonly dbPath: (string & {}) | ':memory:') {
     this.db = new Database(dbPath)
     // Before WAL and any table, so a new file returns free pages in bounded steps; an existing one needs a VACUUM.
     this.db.pragma('auto_vacuum = INCREMENTAL')

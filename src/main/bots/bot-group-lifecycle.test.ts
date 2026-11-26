@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
 import { agentJournalSubmissionKey } from '../../shared/agent-session/journal/agent-session-journal-item-key'
 import { fixture, groupNativeMocks } from './bot-group-native-runtime.test-fixture'
-import { BotGroupRuntime, markBotGroupRoomUnread } from './bot-group-runtime'
+import { markBotGroupRoomUnread } from './bot-group-runtime'
 import { migrateBotGroupHomes } from './bot-group-home-migration'
 
 const mocks = groupNativeMocks()
@@ -39,7 +39,7 @@ describe('group lifecycle', () => {
     const { groups } = fixture()
     const group = await groups.create({ name: 'Solo', botIds: ['bot-0'] })
     await groups.removeBot('bot-0')
-    const { group: current } = groups.read(group.id)
+    const { group: current } = await groups.read(group.id)
     expect(current.members).toEqual([])
     expect(current.folderWorkspaceId).toBe(group.folderWorkspaceId)
     await expect(
@@ -69,7 +69,7 @@ describe('group lifecycle', () => {
     expect(groups.store.operationMessage(message.turns[0].operationId)).toBeNull()
     expect(closed()).toEqual(group.members.map((m) => m.sessionId))
     expect(homes.remove).toHaveBeenCalledWith(group.folderWorkspaceId)
-    expect(() => groups.read(group.id)).toThrow(/not found/)
+    await expect(groups.read(group.id)).rejects.toThrow(/not found/)
     expect(runtime.notifyBotGroupsChanged).toHaveBeenCalled()
   })
 
@@ -107,7 +107,7 @@ describe('group lifecycle', () => {
   })
 
   it('resumes every room’s owed deliveries once the runtime starts', async () => {
-    const { groups, runtime } = fixture()
+    const { groups, newRuntime } = fixture()
     const group = await groups.create({ name: 'Review', botIds: ['bot-0'] })
     const [member] = group.members
     groups.store.append(
@@ -130,7 +130,7 @@ describe('group lifecycle', () => {
       },
       new Map([['owed-op', '[]']])
     )
-    new BotGroupRuntime(runtime).resumePending()
+    newRuntime().resumePending()
     await vi.waitFor(() => expect(mocks.send).toHaveBeenCalledTimes(1))
     expect(mocks.send.mock.calls[0][0].turn.operationId).toBe('owed-op')
     await vi.waitFor(() => expect(groups.store.pending()).toEqual([]))

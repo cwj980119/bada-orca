@@ -75,3 +75,35 @@ it('keeps the initial history when a change arrives during its read', async () =
   unmount()
   vi.mocked(callBotRpc).mockReset()
 })
+
+it('keeps a paired host as the room owner after reading its host-local record', async () => {
+  vi.mocked(callBotRpc).mockResolvedValue({
+    group: {
+      id: 'remote-review',
+      name: 'Review',
+      hostId: 'local',
+      revision: 1,
+      folder: 'review',
+      folderWorkspaceId: 'home',
+      createdAt: 1,
+      members: [],
+      replyMode: { kind: 'all' }
+    },
+    cursor: 1,
+    messages: [],
+    hasEarlier: false
+  })
+  const error = vi.fn()
+  const { result, unmount } = renderHook(() =>
+    useBotGroupTranscript(
+      { hostId: 'runtime:review-server', id: 'remote-review' },
+      undefined,
+      true,
+      error
+    )
+  )
+  await act(async () => {})
+  expect(result.current.data?.group.hostId).toBe('runtime:review-server')
+  unmount()
+  vi.mocked(callBotRpc).mockReset()
+})

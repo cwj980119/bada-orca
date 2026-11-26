@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { useBots } from '@/lib/bot-catalog'
 import { openBotGroup } from '@/lib/bot-group-catalog'
 import { refreshBotGroups } from '@/lib/bot-group-list'
+import { stampBotGroupHosts } from '@/lib/bot-group-catalog-snapshot'
 import type { BotGroup } from '../../../../shared/bots/bot-group'
 import type { Bot } from '../../../../shared/bot-types'
 import type { ExecutionHostId } from '../../../../shared/execution-host/execution-host'
@@ -112,10 +113,11 @@ export function BotGroupMembersDialog({
       )
       await refreshBotGroups()
       if (!group) {
+        const created = stampBotGroupHosts(host.hostId, [saved])[0]!
         if (onCreated) {
-          onCreated(saved)
+          onCreated(created)
         } else {
-          await openBotGroup(saved)
+          await openBotGroup(created)
         }
       }
       onClose()

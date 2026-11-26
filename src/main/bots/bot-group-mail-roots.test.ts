@@ -79,10 +79,21 @@ describe('group mail roots', () => {
   })
 
   it('refuses new peer turns for an expired human request', async () => {
-    const { groups, roots, notice } = await room(1)
+    const { groups, group, target, roots, notice, row, peer } = await room(1)
     groups.store.update({ ...roots[0]!, deadlineAt: 0 })
     expect(() => groups.reserveMailTurn(notice('expired', ['peer-0']))).toThrow(/expired/)
     expect(groups.store.message('mail:expired')).toBeNull()
+    const next = await groups.send({
+      groupId: group.id,
+      revision: group.revision,
+      messageId: '26e1669e-f8a8-4533-98d6-5e3388283ba0',
+      text: '@Scout new request'
+    })
+    peer('peer-new', next)
+    expect(groups.narrowMailBatch(target.sessionId, [row('peer-0'), row('peer-new')])).toEqual({
+      messages: [row('peer-new')],
+      ended: ['peer-0']
+    })
   })
 
   it('carries one root per notice when two roots wait behind one approval', async () => {
