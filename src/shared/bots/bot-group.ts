@@ -93,7 +93,11 @@ export const BotGroupCreate = z.object({
   botIds: z.array(z.string().min(1)).min(1).max(32)
 })
 export const BotGroupRead = Room.extend({
-  beforeSequence: z.number().int().positive().optional()
+  beforeSequence: z.number().int().positive().optional(),
+  afterChange: z.number().int().nonnegative().optional(),
+  revision: z.number().int().positive().optional()
+}).refine((input) => input.beforeSequence === undefined || input.afterChange === undefined, {
+  message: 'Read earlier history or new changes, not both.'
 })
 export const BotGroupUpdate = Revision.extend({
   name: BotNameSchema.optional(),

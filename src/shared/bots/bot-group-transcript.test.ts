@@ -34,6 +34,22 @@ const ids = (transcript: BotGroupTranscript | null) =>
   transcript?.messages.map((entry) => entry.sequence)
 
 describe('room transcript', () => {
+  it('merges changed older posts without dropping loaded history or accepting an older cursor', () => {
+    const current = { ...page([1, 2, 3], { hasEarlier: true }), cursor: 3 }
+    const next = reduceBotGroupTranscript(current, {
+      kind: 'recent',
+      page: { ...page([]), messages: [message(1, 'Reviewed')], cursor: 4, delta: true }
+    })
+    expect(next?.messages.map((entry) => entry.text)).toEqual(['Reviewed', 'm2', 'm3'])
+    expect(next?.hasEarlier).toBe(true)
+    expect(next?.cursor).toBe(4)
+    expect(
+      reduceBotGroupTranscript(next, {
+        kind: 'recent',
+        page: { ...page([1]), cursor: 3, delta: true }
+      })?.messages.map((entry) => entry.text)
+    ).toEqual(['Reviewed', 'm2', 'm3'])
+  })
   const loaded = reduceBotGroupTranscript(
     reduceBotGroupTranscript(null, { kind: 'recent', page: page([3, 4], { hasEarlier: true }) }),
     { kind: 'earlier', page: page([1, 2]) }

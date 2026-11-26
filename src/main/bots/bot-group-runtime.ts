@@ -1,6 +1,12 @@
+import { readBotGroup } from './bot-group-read'
 import type { z } from 'zod'
 import { runIsClosed } from '../runtime/orchestration/db/runs/run-controls'
-import type { BotGroupCreate, BotGroupSend, BotGroupUpdate } from '../../shared/bots/bot-group'
+import type {
+  BotGroupCreate,
+  BotGroupSend,
+  BotGroupUpdate,
+  BotGroupRead
+} from '../../shared/bots/bot-group'
 import type {
   StructuredMailboxPointerHost,
   StructuredMailOwner
@@ -19,7 +25,6 @@ import {
 } from './bot-group-membership'
 import {
   assertGroupQueuedMessageAllowed,
-  readBotGroup,
   resumePendingGroupDeliveries,
   sendBotGroupMessage
 } from './bot-group-delivery'
@@ -143,8 +148,12 @@ export class BotGroupRuntime {
   removeBot = (botId: string) => removeBotFromGroups(this, botId)
   send = (input: z.infer<typeof BotGroupSend>) => sendBotGroupMessage(this, input)
   newThread = (groupId: string) => createBotGroupThread(this, groupId)
-  read = (groupId: string, beforeSequence?: number, threadId?: string) =>
-    readBotGroup(this, groupId, beforeSequence, threadId)
+  read = (
+    groupId: string,
+    beforeSequence?: number,
+    threadId?: string,
+    changes?: Pick<z.infer<typeof BotGroupRead>, 'afterChange' | 'revision'>
+  ) => readBotGroup(this, groupId, beforeSequence, threadId, changes)
   stop = (groupId: string, botId?: string, threadId?: string) =>
     stopBotGroup(this, groupId, botId, threadId)
   resumePending = () => resumePendingGroupDeliveries(this)

@@ -70,7 +70,8 @@ export const BOT_GROUP_METHODS = [
       return runtimeBotGroups(context.runtime).read(
         params.groupId,
         params.beforeSequence,
-        params.threadId
+        params.threadId,
+        params
       )
     }
   }),

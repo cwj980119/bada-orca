@@ -1,3 +1,4 @@
+import { BotGroupMessageChanges } from './bot-group-message-changes'
 import {
   BotGroupLatestSchema,
   BotGroupSchema,
@@ -21,6 +22,8 @@ const MessageRecordSchema = BotGroupMessageSchema.omit({ sequence: true })
 export type PendingGroupTurn = { message: BotGroupMessage; turn: BotGroupTurn }
 
 export class BotGroupStore {
+  readonly changes: BotGroupMessageChanges
+
   constructor(private readonly db: Database) {
     db.exec(`CREATE TABLE IF NOT EXISTS bot_groups (id TEXT PRIMARY KEY, record TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS bot_group_messages (
@@ -35,6 +38,7 @@ export class BotGroupStore {
       CREATE INDEX IF NOT EXISTS bot_group_messages_thread
         ON bot_group_messages(group_id, coalesce(json_extract(record, '$.threadId'), ''), sequence);
       CREATE TABLE IF NOT EXISTS bot_group_sidebar (group_id TEXT PRIMARY KEY, sidebar_order INTEGER, latest TEXT);`)
+    this.changes = new BotGroupMessageChanges(db, (row) => this.messageRow(row))
   }
 
   /** Groups saved with a home; one still to migrate is listed once it has one. */
@@ -165,6 +169,7 @@ export class BotGroupStore {
         `DELETE FROM bot_group_worker_operations WHERE operation_id IN (${operations})`,
         `DELETE FROM bot_group_operations WHERE message_id IN (${ofGroup})`,
         'DELETE FROM bot_group_pending WHERE group_id = ?',
+        'DELETE FROM bot_group_message_changes WHERE group_id = ?',
         'DELETE FROM bot_group_messages WHERE group_id = ?',
         'DELETE FROM bot_group_sidebar WHERE group_id = ?',
         'DELETE FROM bot_groups WHERE id = ?'

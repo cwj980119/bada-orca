@@ -274,25 +274,3 @@ export function resumePendingGroupDeliveries(groups: BotGroupRuntime): void {
     void deliverTurn(groups, message, turn)
   }
 }
-
-/** One room's latest page; its `group` carries that room's member sessions. */
-export function readBotGroup(
-  groups: BotGroupRuntime,
-  groupId: string,
-  beforeSequence?: number,
-  threadId?: string
-) {
-  const group = groups.store.room(groupId, threadId)
-  const messages = groups.store.roomMessages(groupId, threadId, 40, beforeSequence)
-  return {
-    group,
-    // Saved replies feed later posts' context only; the room renders each turn from its chat.
-    messages: messages.map((message) => ({
-      ...message,
-      turns: message.turns.map(({ reply: _reply, ...turn }) => turn)
-    })),
-    hasEarlier:
-      messages.length > 0 &&
-      groups.store.roomMessages(groupId, threadId, 1, messages[0].sequence).length > 0
-  }
-}

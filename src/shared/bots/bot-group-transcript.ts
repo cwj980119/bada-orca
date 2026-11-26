@@ -4,6 +4,9 @@ export type BotGroupTranscript = {
   group: BotGroup
   messages: BotGroupMessage[]
   hasEarlier: boolean
+  cursor?: number
+  delta?: boolean
+  hasMoreChanges?: boolean
 }
 
 export type BotGroupTranscriptAction =
@@ -61,12 +64,28 @@ export function reduceBotGroupTranscript(
   switch (action.kind) {
     case 'recent': {
       const { page } = action
+      if (page.delta && accepted === 'same') {
+        if (
+          page.cursor !== undefined &&
+          current.cursor !== undefined &&
+          page.cursor < current.cursor
+        ) {
+          return current
+        }
+        return {
+          ...current,
+          group,
+          cursor: page.cursor,
+          hasMoreChanges: page.hasMoreChanges,
+          messages: upsert(current.messages, page.messages)
+        }
+      }
       // Older pages stay only while they still join the new page and no member left, since leaving rewrites their turns.
       const joins =
         page.messages.length === 0 ||
         current.messages.some((message) => message.id === page.messages[0].id)
       return accepted === 'same' && joins
-        ? { ...current, group, messages: upsert(current.messages, page.messages) }
+        ? { ...current, ...page, messages: upsert(current.messages, page.messages) }
         : page
     }
     case 'earlier':
