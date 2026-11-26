@@ -66,7 +66,7 @@ export function MonitorConversations({
           aria-label={t('orchestrationMonitor.conversations', 'Conversations')}
           className={cn(
             'scrollbar-sleek min-h-0 overflow-y-auto border-r',
-            mobileOpen && 'hidden @min-[700px]/conversations:block'
+            mobileOpen && '@max-[700px]/conversations:hidden'
           )}
         >
           <h2 className="border-b px-4 py-3 text-sm font-semibold">
