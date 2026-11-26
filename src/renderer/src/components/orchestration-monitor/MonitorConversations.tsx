@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { ArrowLeft, MessageSquare, Plus, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { BotGroupChat } from '@/components/bots/BotGroupChat'
 import { BotGroupFaces } from '@/components/bots/BotGroupFaces'
 import { BotGroupMembersDialog } from '@/components/bots/BotGroupMembersDialog'
 import { botGroupFaces } from '../../../../shared/bots/bot-group-face-layout'
@@ -37,47 +36,57 @@ export function MonitorConversations({
     groups.map((group) => JSON.stringify(['group', group.hostId, group.id]))
   )
   const history = monitorConversations(data.messages).filter(
-    (item) =>
-      !nativeIds.has(item.id) &&
-      (!messageIds || item.messages.some((message) => messageIds.has(message.id)))
+    (item) => !messageIds || item.messages.some((message) => messageIds.has(message.id))
   )
   const participant = (id: string) => data.participants.find((item) => item.id === id)
   const name = (id: string) => participant(id)?.name ?? id
   const rooms = [
     ...groups.map((group) => {
+      const id = JSON.stringify(['group', group.hostId, group.id])
+      const transcript = history.find((item) => item.id === id) ?? {
+        id,
+        participants: [],
+        messages: [],
+        group: true
+      }
+      const last = transcript.messages.at(-1)
       const members = group.members.flatMap(
         (member) => bots.find((bot) => bot.hostId === group.hostId && bot.id === member.botId) ?? []
       )
       return {
-        id: JSON.stringify(['group', group.hostId, group.id]),
+        id,
         title: group.name,
         count: group.members.length,
         group: true,
         native: group,
-        history: undefined,
-        preview: group.latest?.text ?? members.map((bot) => bot.name).join(', '),
-        at: group.latest?.at ?? group.createdAt,
+        history: transcript,
+        preview: last
+          ? `${name(last.from)}: ${last.preview || last.subject}`
+          : members.map((bot) => bot.name).join(', '),
+        at: last ? new Date(last.createdAt).getTime() : group.createdAt,
         avatar: <BotGroupFaces faces={botGroupFaces(members, (bot) => bot.id)} className="size-7" />
       }
     }),
-    ...history.map((room) => {
-      const last = room.messages.at(-1)!
-      return {
-        id: room.id,
-        title: room.participants.map(name).join(', '),
-        count: room.participants.length,
-        group: room.group,
-        native: undefined,
-        history: room,
-        preview: `${name(last.from)}: ${last.preview || last.subject}`,
-        at: new Date(last.createdAt).getTime(),
-        avatar: (
-          <MonitorRoomAvatar
-            participants={room.participants.flatMap((id) => participant(id) ?? [])}
-          />
-        )
-      }
-    })
+    ...history
+      .filter((room) => !nativeIds.has(room.id))
+      .map((room) => {
+        const last = room.messages.at(-1)!
+        return {
+          id: room.id,
+          title: room.participants.map(name).join(', '),
+          count: room.participants.length,
+          group: room.group,
+          native: undefined,
+          history: room,
+          preview: `${name(last.from)}: ${last.preview || last.subject}`,
+          at: new Date(last.createdAt).getTime(),
+          avatar: (
+            <MonitorRoomAvatar
+              participants={room.participants.flatMap((id) => participant(id) ?? [])}
+            />
+          )
+        }
+      })
   ].sort((a, b) => b.at - a.at)
   const room = rooms.find((item) => item.id === selectedId) ?? rooms[0]
   const choose = (id: string) => {
@@ -204,28 +213,15 @@ export function MonitorConversations({
                     >
                       <Users className="size-4" />
                     </Button>
-                  ) : (
-                    <Badge variant="outline">{t('orchestrationMonitor.history', 'History')}</Badge>
-                  )}
+                  ) : null}
+                  <Badge variant="outline">{t('orchestrationMonitor.history', 'History')}</Badge>
                 </header>
-                {room.native ? (
-                  <div className="min-h-0 flex-1 overflow-hidden">
-                    <BotGroupChat
-                      key={room.id}
-                      roomId={room.native.id}
-                      tabId={`monitor-room:${room.native.hostId}:${room.native.id}`}
-                      isVisible
-                      isFocusedGroup
-                    />
-                  </div>
-                ) : room.history ? (
-                  <MonitorConversationTimeline
-                    key={room.id}
-                    data={data}
-                    room={room.history}
-                    onSelect={onSelect}
-                  />
-                ) : null}
+                <MonitorConversationTimeline
+                  key={room.id}
+                  data={data}
+                  room={room.history}
+                  onSelect={onSelect}
+                />
               </>
             ) : null}
           </div>
