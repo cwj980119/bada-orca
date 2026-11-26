@@ -108,9 +108,12 @@ export const BotGroupReorder = GroupId.extend({ sidebarOrder: z.number().int().n
 export const BotGroupSend = Revision.extend({
   threadId: Room.shape.threadId,
   messageId: z.string().uuid(),
-  text: z.string().trim().min(1).max(100_000)
+  text: z.string().trim().min(1).max(100_000),
+  maxPeerTurns: z.number().int().min(0).max(128).optional(),
+  timeoutMs: z.number().int().min(60_000).max(3_600_000).optional()
 })
 export const BotGroupStop = Room.extend({ botId: z.string().min(1).optional() })
+export const BotGroupRetry = GroupId.extend({ operationId: z.string().min(1) })
 export const BotGroupNewThread = GroupId.extend({})
 export const BotGroupDelete = GroupId
 

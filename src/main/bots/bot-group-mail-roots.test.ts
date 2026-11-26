@@ -68,6 +68,23 @@ async function room(posts: number) {
 describe('group mail roots', () => {
   const ids = (batch: { messages: { id: string }[] }) => batch.messages.map((mail) => mail.id)
 
+  it('bounds peer turns per human request while replaying an admitted operation', async () => {
+    const { groups, roots, notice } = await room(1)
+    groups.store.update({ ...roots[0]!, peerTurnLimit: 1 })
+    groups.reserveMailTurn(notice('first', ['peer-0']))
+    groups.reserveMailTurn(notice('first', ['peer-0']))
+    expect(() => groups.reserveMailTurn(notice('second', ['peer-0']))).toThrow(/delivery limit/)
+    expect(groups.store.message('mail:first')?.rootRequestId).toBe(roots[0]!.id)
+    expect(groups.store.message('mail:second')).toBeNull()
+  })
+
+  it('refuses new peer turns for an expired human request', async () => {
+    const { groups, roots, notice } = await room(1)
+    groups.store.update({ ...roots[0]!, deadlineAt: 0 })
+    expect(() => groups.reserveMailTurn(notice('expired', ['peer-0']))).toThrow(/expired/)
+    expect(groups.store.message('mail:expired')).toBeNull()
+  })
+
   it('carries one root per notice when two roots wait behind one approval', async () => {
     const { groups, target, roots, row, notice } = await room(2)
     expect(ids(groups.narrowMailBatch(target.sessionId, [row('peer-1'), row('peer-0')]))).toEqual([

@@ -54,6 +54,7 @@ export const MOBILE_BOT_RPC_METHODS = [
   'bots.groups.newThread',
   'bots.groups.read',
   'bots.groups.reorder',
+  'bots.groups.retry',
   'bots.groups.send',
   'bots.groups.stop',
   'bots.groups.update',

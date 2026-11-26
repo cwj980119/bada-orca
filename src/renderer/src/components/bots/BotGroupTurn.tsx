@@ -39,6 +39,7 @@ export const BotGroupTurn = memo(function BotGroupTurn({
   session,
   onStop,
   onReply,
+  onRetry,
   scrollMessageToTop,
   files,
   roomLinks,
@@ -59,6 +60,7 @@ export const BotGroupTurn = memo(function BotGroupTurn({
   session?: BotGroupSession
   onStop: (botId: string) => void
   onReply: (botId: string) => void
+  onRetry?: () => void
   scrollMessageToTop: (element: HTMLElement) => void
 }): React.JSX.Element {
   const t = useTranslate()
@@ -270,6 +272,11 @@ export const BotGroupTurn = memo(function BotGroupTurn({
             <p role="alert" className="text-sm text-chat-warning">
               {rejection}
             </p>
+          ) : null}
+          {turn.retryable && onRetry ? (
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              {t('settings.bots.retry', 'Retry')}
+            </Button>
           ) : null}
           {scope.bar}
           {scope.lead}

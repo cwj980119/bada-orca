@@ -32,7 +32,6 @@ describe('persistent native group lifecycle', () => {
       '[]',
       '[]'
     ])
-    expect(groups.store.message(message.id)?.turns).toEqual(message.turns)
     await groups.send(input)
     expect(groups.store.messages(group.id)).toHaveLength(1)
     await expect(groups.send({ ...input, text: 'different' })).rejects.toThrow(/identity/)

@@ -366,6 +366,12 @@ export function BotGroupChat({
                         session={sessions.get(turn.sessionId)}
                         onStop={stop}
                         onReply={reply}
+                        onRetry={() => {
+                          void callBotRpc(group!, 'bots.groups.retry', {
+                            groupId: group!.id,
+                            operationId: turn.operationId
+                          }).catch((error: unknown) => setError(String(error)))
+                        }}
                         scrollMessageToTop={follow.scrollMessageToTop}
                       />
                     ))}

@@ -16,6 +16,7 @@ import { isBotGroupMemberSession } from '../../shared/bots/bot-group'
 import { folderWorkspaceKey } from '../../shared/workspace/identity/workspace-scope'
 import { BotGroupStore } from './bot-group-store'
 import { BotGroupDeliveryQueue } from './bot-group-delivery-queue'
+import { BotGroupRetrySchedule } from './bot-group-retry-schedule'
 import { migrateBotGroupHomes } from './bot-group-home-migration'
 import {
   createBotGroup,
@@ -27,6 +28,7 @@ import {
 import {
   assertGroupQueuedMessageAllowed,
   resumePendingGroupDeliveries,
+  retryBotGroupDelivery,
   sendBotGroupMessage
 } from './bot-group-delivery'
 import { stopBotGroup } from './bot-group-stop'
@@ -43,6 +45,7 @@ import {
 import type { MessageRow } from '../runtime/orchestration/db/orchestration-records'
 
 const runtimes = new WeakMap<OrcaRuntimeService, BotGroupRuntime>()
+const recoveryWatches = new WeakMap<OrcaRuntimeService, () => void>()
 export function runtimeBotGroups(runtime: OrcaRuntimeService): BotGroupRuntime {
   let groups = runtimes.get(runtime)
   if (!groups) {
@@ -116,6 +119,19 @@ export function startBotGroupsSoon(runtime: OrcaRuntimeService, isCurrent: () =>
     try {
       if (isCurrent()) {
         const groups = runtimeBotGroups(runtime)
+        recoveryWatches.get(runtime)?.()
+        recoveryWatches.set(
+          runtime,
+          runtime.onBotsWritten(() => {
+            if (isCurrent()) {
+              try {
+                groups.resumePending()
+              } catch (error) {
+                warn(error)
+              }
+            }
+          })
+        )
         void migrateBotGroupHomes(groups)
           .catch(warn)
           .then(() => groups.resumePending())
@@ -135,6 +151,7 @@ export class BotGroupRuntime {
   /** Operations whose native admission is in flight. */
   readonly deliveries = new Set<string>()
   readonly deliveryQueue = new BotGroupDeliveryQueue()
+  readonly retrySchedule = new BotGroupRetrySchedule()
 
   constructor(readonly runtime: OrcaRuntimeService) {
     this.store = new BotGroupStore(runtime.getOrchestrationDb().db)
@@ -159,6 +176,8 @@ export class BotGroupRuntime {
   stop = (groupId: string, botId?: string, threadId?: string) =>
     stopBotGroup(this, groupId, botId, threadId)
   resumePending = () => resumePendingGroupDeliveries(this)
+  retry = (groupId: string, operationId: string) =>
+    retryBotGroupDelivery(this, groupId, operationId)
   assertQueuedMessageAllowed = (sessionId: string, operationId: string) =>
     assertGroupQueuedMessageAllowed(this, sessionId, operationId)
   peerScope = (sessionId: string, targetBotId: string, rootItemId: string | null) =>

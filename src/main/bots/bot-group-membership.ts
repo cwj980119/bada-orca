@@ -251,6 +251,9 @@ async function retireMembers(groups: BotGroupRuntime, next: BotGroup): Promise<B
       })
     }
   })
+  for (const { sessionId } of leaving) {
+    groups.deliveryQueue.release(sessionId)
+  }
   await closeSessions(groups, leaving)
   groups.changed()
   return group

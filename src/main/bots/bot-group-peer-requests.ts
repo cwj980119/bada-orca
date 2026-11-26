@@ -10,6 +10,7 @@ import type { StructuredMailboxPointerHost } from '../runtime/orchestration/mail
 import { getStructuredAgentSessionHost } from '../native-chat/agent-session-wire/host/structured-agent-session-registry'
 import { requireStructuredHost } from './bot-chat-session'
 import type { BotGroupRuntime } from './bot-group-runtime'
+import { assertGroupRequestBudget } from './bot-group-request-budget'
 
 export type GroupPeerScope = NonNullable<Awaited<ReturnType<typeof groupPeerScope>>>
 
@@ -74,6 +75,7 @@ export async function groupPeerScope(
 }
 
 export function assertGroupPeerScope(groups: BotGroupRuntime, scope: GroupPeerScope): void {
+  assertGroupRequestBudget(groups, scope.rootRequestId)
   // The source's room as it stands now: a thread's members, or the original room's.
   const group = groups.store.memberOf(scope.source.sessionId)?.group
   if (
@@ -195,6 +197,7 @@ export function reserveGroupMailTurn(
   if (groups.store.message(id)) {
     return
   }
+  assertGroupRequestBudget(groups, first.rootRequestId)
   const bot = groups.runtime.bots.list().find((bot) => bot.id === member.botId)
   if (!bot || bot.paused) {
     throw new Error('This group bot is paused or unavailable.')

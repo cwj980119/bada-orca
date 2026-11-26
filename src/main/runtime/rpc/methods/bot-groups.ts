@@ -4,6 +4,7 @@ import {
   BotGroupSend,
   BotGroupUpdate,
   BotGroupStop,
+  BotGroupRetry,
   BotGroupDelete,
   BotGroupNewThread,
   BotGroupReorder
@@ -82,6 +83,16 @@ export const BOT_GROUP_METHODS = [
     handler: async (params, context) => {
       assertBotGroupOwner(context)
       return { message: await runtimeBotGroups(context.runtime).send(params) }
+    }
+  }),
+  defineMethod({
+    name: 'bots.groups.retry',
+    permission: 'workspace',
+    params: BotGroupRetry,
+    handler: (params, context) => {
+      assertBotGroupOwner(context)
+      runtimeBotGroups(context.runtime).retry(params.groupId, params.operationId)
+      return { ok: true }
     }
   }),
   defineMethod({

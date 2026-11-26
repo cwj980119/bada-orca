@@ -14,6 +14,7 @@ import {
   BotGroupNewThread,
   BotGroupRead,
   BotGroupReorder,
+  BotGroupRetry,
   BotGroupSend,
   BotGroupStop,
   BotGroupUpdate
@@ -938,6 +939,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'bots.groups.newThread': BotGroupNewThread,
   'bots.groups.read': BotGroupRead,
   'bots.groups.reorder': BotGroupReorder,
+  'bots.groups.retry': BotGroupRetry,
   'bots.groups.send': BotGroupSend,
   'bots.groups.stop': BotGroupStop,
   'bots.groups.update': BotGroupUpdate,
