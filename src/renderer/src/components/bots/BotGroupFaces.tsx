@@ -1,19 +1,20 @@
 import React from 'react'
 import { cn } from '@/lib/class-names'
 import { overlapCutoutMask } from '@/lib/overlap-cutout-mask'
-import type { Bot } from '../../../../shared/bot-types'
 import {
   BOT_GROUP_FACE_GAP,
   type BotGroupFace
 } from '../../../../shared/bots/bot-group-face-layout'
 import { BotAvatar, BotAvatarTile } from './BotAvatar'
 
+type FaceBot = React.ComponentProps<typeof BotAvatar>['bot']
+
 /** A group's overlapping member circles, laid out by one of the face layouts. */
 export function BotGroupFaces({
   faces,
   className
 }: {
-  faces: readonly BotGroupFace<Bot>[]
+  faces: readonly BotGroupFace<FaceBot>[]
   /** Sizes the slot the faces fill. */
   className: string
 }): React.JSX.Element {
@@ -44,8 +45,8 @@ export function BotGroupFaces({
 
 /** Places a circle and cuts a clear gap where a later one overlaps it, so it matches any background. */
 function botGroupFaceStyle(
-  face: BotGroupFace<Bot>,
-  above: readonly BotGroupFace<Bot>[]
+  face: BotGroupFace<FaceBot>,
+  above: readonly BotGroupFace<FaceBot>[]
 ): React.CSSProperties {
   return {
     left: face.x,

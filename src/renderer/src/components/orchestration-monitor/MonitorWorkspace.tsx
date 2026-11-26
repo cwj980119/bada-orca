@@ -11,9 +11,13 @@ import { MonitorDetails } from './MonitorDetails'
 import { MonitorRelationshipGraph } from './MonitorRelationshipGraph'
 import { MonitorConversations } from './MonitorConversations'
 import { MonitorWorks } from './MonitorWorks'
+import type { Bot } from '../../../../shared/bot-types'
+import type { BotGroup } from '../../../../shared/bots/bot-group'
 
 export function MonitorWorkspace({
   all,
+  bots,
+  groups,
   data,
   hosts,
   relations,
@@ -27,6 +31,8 @@ export function MonitorWorkspace({
   onConfigure
 }: {
   all: MonitorData
+  bots: readonly Bot[]
+  groups: readonly BotGroup[]
   data: MonitorData
   hosts: readonly MonitorHostSnapshot[]
   relations: MonitorRelation[]
@@ -71,7 +77,7 @@ export function MonitorWorkspace({
           <TabsTrigger value="map">{t('orchestrationMonitor.map', 'Relationship map')}</TabsTrigger>
         </TabsList>
       </div>
-      {!data.participants.length && view !== 'works' ? (
+      {!data.participants.length && view !== 'works' && view !== 'conversations' ? (
         <div className="mt-3 rounded-xl border p-8 text-center">
           <Network className="mx-auto mb-4 size-6 text-muted-foreground" />
           <p className="text-sm">
@@ -126,6 +132,8 @@ export function MonitorWorkspace({
             </TabsContent>
             <TabsContent value="conversations">
               <MonitorConversations
+                bots={bots}
+                groups={groups}
                 data={all}
                 messageIds={conversationMessageIds}
                 onSelect={onSelect}

@@ -1,97 +1,136 @@
-import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, MessageSquare, Users } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowLeft, MessageSquare, Plus, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { BotGroupChat } from '@/components/bots/BotGroupChat'
+import { BotGroupFaces } from '@/components/bots/BotGroupFaces'
+import { BotGroupMembersDialog } from '@/components/bots/BotGroupMembersDialog'
+import { botGroupFaces } from '../../../../shared/bots/bot-group-face-layout'
+import type { Bot } from '../../../../shared/bot-types'
+import type { BotGroup } from '../../../../shared/bots/bot-group'
 import { useIntlLocale, useTranslate } from '@/i18n/use-translate'
 import { cn } from '@/lib/class-names'
-import { motionSafeScrollBehavior } from '@/hooks/theme/usePrefersReducedMotion'
-import { MessageBody, MonitorMessageBadges } from './MonitorDetails'
 import type { MonitorData, MonitorSelection } from './monitor-host-snapshot'
 import { monitorConversations } from './monitor-conversations'
-import { MonitorParticipantAvatar } from './MonitorParticipantAvatar'
-import { progressReason } from './monitor-operation-labels'
+import { MonitorRoomAvatar } from './MonitorRoomAvatar'
+import { MonitorConversationTimeline } from './MonitorConversationTimeline'
 
 export function MonitorConversations({
   data,
+  bots,
+  groups,
   messageIds,
   onSelect
 }: {
   data: MonitorData
+  bots: readonly Bot[]
+  groups: readonly BotGroup[]
   messageIds?: ReadonlySet<string>
   onSelect: (selection: MonitorSelection) => void
 }): React.JSX.Element {
   const t = useTranslate()
   const locale = useIntlLocale()
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const scroll = useRef<HTMLDivElement>(null)
-  const nearBottom = useRef(true)
-  const rooms = monitorConversations(data.messages).filter(
-    (item) => !messageIds || item.messages.some((message) => messageIds.has(message.id))
+  const [dialog, setDialog] = useState<BotGroup | 'new' | null>(null)
+  const nativeIds = new Set(
+    groups.map((group) => JSON.stringify(['group', group.hostId, group.id]))
   )
-  const room = rooms.find((item) => item.id === selectedId) ?? rooms[0]
+  const history = monitorConversations(data.messages).filter(
+    (item) =>
+      !nativeIds.has(item.id) &&
+      (!messageIds || item.messages.some((message) => messageIds.has(message.id)))
+  )
   const participant = (id: string) => data.participants.find((item) => item.id === id)
   const name = (id: string) => participant(id)?.name ?? id
-  const title = (ids: string[]) => ids.map(name).join(', ')
-  const roomId = room?.id
-  const lastId = room?.messages.at(-1)?.id
-  useEffect(() => {
-    if (selectedId === null && roomId) {
-      setSelectedId(roomId)
-    }
-  }, [selectedId, roomId])
-  useEffect(() => {
-    if (nearBottom.current && scroll.current) {
-      scroll.current.scrollTo({
-        top: scroll.current.scrollHeight,
-        behavior: motionSafeScrollBehavior()
-      })
-    }
-  }, [roomId, lastId])
-  if (!room) {
-    return (
-      <p className="rounded-xl border p-8 text-center text-sm text-muted-foreground">
-        {t('orchestrationMonitor.noMessages', 'No messages in this scope.')}
-      </p>
-    )
+  const rooms = [
+    ...groups.map((group) => {
+      const members = group.members.flatMap(
+        (member) => bots.find((bot) => bot.hostId === group.hostId && bot.id === member.botId) ?? []
+      )
+      return {
+        id: JSON.stringify(['group', group.hostId, group.id]),
+        title: group.name,
+        count: group.members.length,
+        group: true,
+        native: group,
+        history: undefined,
+        preview: group.latest?.text ?? members.map((bot) => bot.name).join(', '),
+        at: group.latest?.at ?? group.createdAt,
+        avatar: <BotGroupFaces faces={botGroupFaces(members, (bot) => bot.id)} className="size-7" />
+      }
+    }),
+    ...history.map((room) => {
+      const last = room.messages.at(-1)!
+      return {
+        id: room.id,
+        title: room.participants.map(name).join(', '),
+        count: room.participants.length,
+        group: room.group,
+        native: undefined,
+        history: room,
+        preview: `${name(last.from)}: ${last.preview || last.subject}`,
+        at: new Date(last.createdAt).getTime(),
+        avatar: (
+          <MonitorRoomAvatar
+            participants={room.participants.flatMap((id) => participant(id) ?? [])}
+          />
+        )
+      }
+    })
+  ].sort((a, b) => b.at - a.at)
+  const room = rooms.find((item) => item.id === selectedId) ?? rooms[0]
+  const choose = (id: string) => {
+    setSelectedId(id)
+    setMobileOpen(true)
   }
+  const conversations = t('orchestrationMonitor.conversations', 'Conversations')
+  const newGroup = t('bots.groups.newGroup', 'New group')
   return (
-    <section
-      className="@container/conversations h-[640px] w-full min-w-0 overflow-hidden rounded-xl border bg-card text-card-foreground"
-      aria-label={t('orchestrationMonitor.conversations', 'Conversations')}
-    >
-      <div className="grid h-full min-w-0 @min-[480px]/conversations:grid-cols-[192px_minmax(0,1fr)] @min-[700px]/conversations:grid-cols-[240px_minmax(0,1fr)]">
-        <nav
-          aria-label={t('orchestrationMonitor.conversations', 'Conversations')}
-          className={cn(
-            'scrollbar-sleek min-h-0 overflow-y-auto border-r',
-            mobileOpen && '@max-[480px]/conversations:hidden'
-          )}
-        >
-          <h2 className="border-b px-4 py-3 text-sm font-semibold">
-            {t('orchestrationMonitor.conversations', 'Conversations')}{' '}
-            <span className="text-muted-foreground">{rooms.length}</span>
-          </h2>
-          {rooms.map((item) => {
-            const last = item.messages.at(-1)!
-            return (
+    <>
+      <section
+        className="@container/conversations h-[640px] w-full min-w-0 overflow-hidden rounded-xl border bg-card text-card-foreground"
+        aria-label={conversations}
+      >
+        <div className="grid h-full min-w-0 @min-[480px]/conversations:grid-cols-[192px_minmax(0,1fr)] @min-[700px]/conversations:grid-cols-[240px_minmax(0,1fr)]">
+          <nav
+            aria-label={conversations}
+            className={cn(
+              'scrollbar-sleek min-h-0 overflow-y-auto border-r',
+              mobileOpen && room && '@max-[480px]/conversations:hidden'
+            )}
+          >
+            <div className="flex items-center gap-2 border-b px-4 py-3">
+              <h2 className="min-w-0 flex-1 text-sm font-semibold">
+                {conversations} <span className="text-muted-foreground">{rooms.length}</span>
+              </h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={newGroup}
+                title={newGroup}
+                disabled={
+                  !bots.some((bot) =>
+                    bots.some((other) => other.hostId === bot.hostId && other.id !== bot.id)
+                  )
+                }
+                onClick={() => setDialog('new')}
+              >
+                <Plus className="size-4" />
+              </Button>
+            </div>
+            {rooms.map((item) => (
               <button
                 key={item.id}
                 type="button"
-                aria-current={room.id === item.id ? 'true' : undefined}
+                aria-current={room?.id === item.id ? 'true' : undefined}
                 className={cn(
                   'flex w-full gap-3 border-b p-3 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
-                  room.id === item.id && 'bg-accent'
+                  room?.id === item.id && 'bg-accent'
                 )}
-                onClick={() => {
-                  setSelectedId(item.id)
-                  setExpandedId(null)
-                  setMobileOpen(true)
-                  nearBottom.current = true
-                }}
+                onClick={() => choose(item.id)}
               >
-                <MonitorParticipantAvatar participant={participant(last.from)} />
+                {item.avatar}
                 <span className="min-w-0 flex-1 space-y-1">
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
                     {item.group ? (
@@ -102,152 +141,106 @@ export function MonitorConversations({
                     {item.group
                       ? t('orchestrationMonitor.groupChat', 'Group conversation')
                       : t('orchestrationMonitor.directChat', 'Direct conversation')}
-                    <span className="ml-auto shrink-0">{item.participants.length}</span>
+                    <span className="ml-auto shrink-0">{item.count}</span>
                   </span>
-                  <span className="block truncate text-sm font-medium">
-                    {title(item.participants)}
-                  </span>
+                  <span className="block truncate text-sm font-medium">{item.title}</span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {name(last.from)}: {last.preview || last.subject}
+                    {item.preview}
                   </span>
-                  <span className="block text-2xs text-muted-foreground">
-                    {last.host.label} ·{' '}
-                    {new Date(last.createdAt).toLocaleString(locale, {
+                  <time
+                    dateTime={new Date(item.at).toISOString()}
+                    className="block text-2xs text-muted-foreground"
+                  >
+                    {new Date(item.at).toLocaleString(locale, {
                       month: 'short',
                       day: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit'
                     })}
-                  </span>
+                  </time>
                 </span>
               </button>
-            )
-          })}
-        </nav>
-        <div
-          className={cn(
-            'min-h-0 min-w-0 flex-col',
-            mobileOpen ? 'flex' : 'hidden @min-[480px]/conversations:flex'
-          )}
-        >
-          <header className="flex items-center gap-2 border-b px-4 py-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0 @min-[480px]/conversations:hidden"
-              aria-label={t('orchestrationMonitor.conversations', 'Conversations')}
-              onClick={() => setMobileOpen(false)}
-            >
-              <ArrowLeft className="size-4" />
-            </Button>
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-sm font-semibold">{title(room.participants)}</h2>
-              <p className="text-xs text-muted-foreground">
-                {room.group
-                  ? t('orchestrationMonitor.groupChat', 'Group conversation')
-                  : t('orchestrationMonitor.directChat', 'Direct conversation')}{' '}
-                ·{' '}
-                {t('orchestrationMonitor.messagesCount', '{{count}} messages', {
-                  count: room.messages.length
-                })}
+            ))}
+            {!rooms.length ? (
+              <p className="p-4 text-sm text-muted-foreground">
+                {t('orchestrationMonitor.noMessages', 'No messages in this scope.')}
               </p>
-            </div>
-            <Badge variant="outline">{t('orchestrationMonitor.history', 'History')}</Badge>
-          </header>
+            ) : null}
+          </nav>
           <div
-            ref={scroll}
-            className="scrollbar-sleek min-h-0 flex-1 overflow-y-auto p-4"
-            onScroll={() => {
-              const element = scroll.current
-              if (element) {
-                nearBottom.current =
-                  element.scrollHeight - element.scrollTop - element.clientHeight < 80
-              }
-            }}
+            className={cn(
+              'min-h-0 min-w-0 flex-col',
+              mobileOpen && room ? 'flex' : 'hidden @min-[480px]/conversations:flex'
+            )}
           >
-            <ol className="space-y-4">
-              {room.messages.map((message, index) => {
-                const previous = room.messages[index - 1]
-                const date = new Date(message.createdAt)
-                const day = date.toLocaleDateString(locale)
-                const dayChanged =
-                  !previous || new Date(previous.createdAt).toLocaleDateString(locale) !== day
-                return (
-                  <li key={message.id}>
-                    {dayChanged ? (
-                      <div className="mb-4 flex items-center gap-3 text-2xs text-muted-foreground">
-                        <span className="h-px flex-1 bg-border" />
-                        <time dateTime={message.createdAt}>{day}</time>
-                        <span className="h-px flex-1 bg-border" />
-                      </div>
-                    ) : null}
-                    <article className="flex min-w-0 gap-3">
-                      <MonitorParticipantAvatar participant={participant(message.from)} />
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                          <button
-                            type="button"
-                            className="break-words text-sm font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            onClick={() => onSelect({ kind: 'participant', id: message.from })}
-                          >
-                            {name(message.from)}
-                          </button>
-                          <span className="break-words text-xs text-muted-foreground">
-                            → {name(message.to)}
-                          </span>
-                          <time
-                            dateTime={message.createdAt}
-                            title={date.toLocaleString(locale)}
-                            className="text-2xs text-muted-foreground"
-                          >
-                            {date.toLocaleTimeString(locale, {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </time>
-                        </div>
-                        <div className="space-y-2 rounded-xl border bg-background p-3 [overflow-wrap:anywhere]">
-                          <p className="text-sm font-medium">{message.subject}</p>
-                          <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                            {message.preview}
-                          </p>
-                          {message.threadId ? (
-                            <p className="text-xs text-muted-foreground">
-                              {t('orchestrationMonitor.thread', 'Reply to')}:{' '}
-                              {data.messages.find(
-                                (item) =>
-                                  item.host.id === message.host.id &&
-                                  item.rawId === message.threadId
-                              )?.subject ?? message.threadId}
-                            </p>
-                          ) : null}
-                          <MonitorMessageBadges message={message} />
-                          {message.progress ? (
-                            <p className="text-xs leading-relaxed text-muted-foreground">
-                              {progressReason(t, message.progress.reason)}
-                            </p>
-                          ) : null}
-                          <Button
-                            variant="link"
-                            size="inlineText"
-                            aria-expanded={expandedId === message.id}
-                            onClick={() =>
-                              setExpandedId(expandedId === message.id ? null : message.id)
-                            }
-                          >
-                            {t('orchestrationMonitor.body', 'Original message')}
-                          </Button>
-                          {expandedId === message.id ? <MessageBody message={message} /> : null}
-                        </div>
-                      </div>
-                    </article>
-                  </li>
-                )
-              })}
-            </ol>
+            {room ? (
+              <>
+                <header className="flex items-center gap-2 border-b px-4 py-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 @min-[480px]/conversations:hidden"
+                    aria-label={conversations}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <ArrowLeft className="size-4" />
+                  </Button>
+                  {room.avatar}
+                  <div className="min-w-0 flex-1">
+                    <h2 className="truncate text-sm font-semibold">{room.title}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {room.group
+                        ? t('orchestrationMonitor.groupChat', 'Group conversation')
+                        : t('orchestrationMonitor.directChat', 'Direct conversation')}{' '}
+                      · {room.count}
+                    </p>
+                  </div>
+                  {room.native ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t('bots.groups.members', 'Members')}
+                      onClick={() => setDialog(room.native!)}
+                    >
+                      <Users className="size-4" />
+                    </Button>
+                  ) : (
+                    <Badge variant="outline">{t('orchestrationMonitor.history', 'History')}</Badge>
+                  )}
+                </header>
+                {room.native ? (
+                  <div className="min-h-0 flex-1 overflow-hidden">
+                    <BotGroupChat
+                      key={room.id}
+                      roomId={room.native.id}
+                      tabId={`monitor-room:${room.native.hostId}:${room.native.id}`}
+                      isVisible
+                      isFocusedGroup
+                    />
+                  </div>
+                ) : room.history ? (
+                  <MonitorConversationTimeline
+                    key={room.id}
+                    data={data}
+                    room={room.history}
+                    onSelect={onSelect}
+                  />
+                ) : null}
+              </>
+            ) : null}
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+      {dialog ? (
+        <BotGroupMembersDialog
+          group={dialog === 'new' ? undefined : dialog}
+          onClose={() => setDialog(null)}
+          onCreated={(group) => {
+            choose(JSON.stringify(['group', group.hostId, group.id]))
+            setDialog(null)
+          }}
+        />
+      ) : null}
+    </>
   )
 }

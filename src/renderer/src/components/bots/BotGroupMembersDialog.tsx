@@ -35,10 +35,12 @@ import { useBotGroupDelete } from './use-bot-group-delete'
 
 export function BotGroupMembersDialog({
   group,
-  onClose
+  onClose,
+  onCreated
 }: {
   group?: BotGroup
   onClose: () => void
+  onCreated?: (group: BotGroup) => void
 }): React.JSX.Element {
   const t = useTranslate()
   const allBots = useBots()
@@ -110,7 +112,11 @@ export function BotGroupMembersDialog({
       )
       await refreshBotGroups()
       if (!group) {
-        await openBotGroup(saved)
+        if (onCreated) {
+          onCreated(saved)
+        } else {
+          await openBotGroup(saved)
+        }
       }
       onClose()
     } catch (error) {

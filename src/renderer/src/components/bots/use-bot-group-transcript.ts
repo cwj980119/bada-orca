@@ -9,17 +9,17 @@ import {
 function readPage(
   group: BotRef,
   threadId: string | undefined,
-  beforeSequence?: number
+  beforeSequence?: number,
+  changes?: { afterChange?: number; revision?: number }
 ): Promise<BotGroupTranscript> {
   return callBotRpc(group, 'bots.groups.read', {
     groupId: group.id,
     threadId,
-    beforeSequence
+    beforeSequence,
+    ...changes
   })
 }
 
-/** The room's transcript while visible: re-read on every host bots change, older pages on request.
- *  A thread's room is read when `threadId` is set. */
 export function useBotGroupTranscript(
   group: BotRef | undefined,
   threadId: string | undefined,
@@ -35,17 +35,39 @@ export function useBotGroupTranscript(
     }
     const ref = { hostId, id: groupId }
     let closed = false
-    let request = 0
-    const read = () => {
-      const current = ++request
-      void readPage(ref, threadId)
-        .then((page) => {
-          if (!closed && request === current) {
-            apply({ kind: 'recent', page })
-            setError(null)
+    let reading = false
+    let dirty = false
+    let cursor: number | undefined
+    let revision: number | undefined
+    const pump = async () => {
+      reading = true
+      try {
+        while (dirty && !closed) {
+          dirty = false
+          const page = await readPage(ref, threadId, undefined, { afterChange: cursor, revision })
+          if (closed) {
+            return
           }
-        })
-        .catch((error: unknown) => !closed && setError(String(error)))
+          apply({ kind: 'recent', page })
+          cursor = page.cursor
+          revision = page.group.revision
+          dirty ||= page.hasMoreChanges === true
+          setError(null)
+        }
+      } catch (error) {
+        dirty = false
+        if (!closed) {
+          setError(String(error))
+        }
+      } finally {
+        reading = false
+      }
+    }
+    const read = () => {
+      dirty = true
+      if (!reading) {
+        void pump()
+      }
     }
     read()
     const stopListening = onBotsChanged(read, hostId, { kinds: ['groups'] })

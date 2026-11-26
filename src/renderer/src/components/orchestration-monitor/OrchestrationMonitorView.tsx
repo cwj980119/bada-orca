@@ -10,15 +10,24 @@ import { monitorRelations } from './monitor-relations'
 import { MonitorHostPicker, MonitorHostStatus } from './MonitorHosts'
 import { MonitorHeader } from './MonitorHeader'
 import { MonitorWorkspace } from './MonitorWorkspace'
+import type { Bot } from '../../../../shared/bot-types'
+import type { BotGroup } from '../../../../shared/bots/bot-group'
+
+const NO_BOTS: readonly Bot[] = []
+const NO_GROUPS: readonly BotGroup[] = []
 
 export function OrchestrationMonitorView({
   hosts,
+  bots = NO_BOTS,
+  groups = NO_GROUPS,
   refreshing,
   onRefresh,
   onBack,
   onConfigure
 }: {
   hosts: readonly MonitorHostSnapshot[]
+  bots?: readonly Bot[]
+  groups?: readonly BotGroup[]
   refreshing: boolean
   onRefresh: () => void
   onBack: () => void
@@ -163,6 +172,19 @@ export function OrchestrationMonitorView({
           </p>
         ) : null}
         <MonitorWorkspace
+          bots={bots.filter((bot) => scopedHosts.some((host) => host.id === bot.hostId))}
+          groups={groups.filter(
+            (group) =>
+              scopedHosts.some((host) => host.id === group.hostId) &&
+              (!needle ||
+                group.name.toLocaleLowerCase().includes(needle) ||
+                bots.some(
+                  (bot) =>
+                    bot.hostId === group.hostId &&
+                    group.members.some((member) => member.botId === bot.id) &&
+                    bot.name.toLocaleLowerCase().includes(needle)
+                ))
+          )}
           all={all}
           data={data}
           hosts={scopedHosts}
