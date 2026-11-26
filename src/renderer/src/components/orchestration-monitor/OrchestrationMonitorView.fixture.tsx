@@ -220,11 +220,45 @@ async function showConversations(frame: HTMLElement): Promise<void> {
   )
 }
 
+async function selectConversation(frame: HTMLElement): Promise<void> {
+  await showConversations(frame)
+  const target = frame.querySelectorAll<HTMLButtonElement>('nav button')[1]
+  if (!target) {
+    throw new Error('Conversation missing')
+  }
+  target.click()
+}
+
 export const conversations = defineFixture({
   width: 1200,
   setup,
   render,
   interact: showConversations
+})
+export const selectedConversation = defineFixture({
+  width: 1200,
+  setup,
+  render,
+  interact: selectConversation
+})
+export const mediumConversation = defineFixture({
+  width: 820,
+  setup,
+  render,
+  interact: selectConversation
+})
+export const conversationParticipant = defineFixture({
+  width: 1100,
+  setup,
+  render,
+  interact: async (frame) => {
+    await showConversations(frame)
+    const target = frame.querySelector<HTMLButtonElement>('article button')
+    if (!target) {
+      throw new Error('Conversation participant missing')
+    }
+    target.click()
+  }
 })
 export const relationship = defineFixture({ width: 1200, setup, render, interact: showMap })
 export const participant = defineFixture({
@@ -263,9 +297,28 @@ export const narrowConversation = defineFixture({
   width: 420,
   setup,
   render,
+  interact: selectConversation
+})
+export const narrowConversationList = defineFixture({
+  width: 420,
+  setup,
+  render,
+  interact: showConversations
+})
+export const narrowConversationBack = defineFixture({
+  width: 420,
+  setup,
+  render,
   interact: async (frame) => {
-    await showConversations(frame)
-    frame.querySelector<HTMLButtonElement>('nav button')?.click()
+    await selectConversation(frame)
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    )
+    const target = frame.querySelector<HTMLButtonElement>('section header button')
+    if (!target) {
+      throw new Error('Conversation back button missing')
+    }
+    target.click()
   }
 })
 export const groupConversation = defineFixture({

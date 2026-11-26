@@ -94,8 +94,10 @@ export function MonitorWorkspace({
         <div
           className={cn(
             'grid min-w-0 items-start gap-4',
-            ((selection && view !== 'operations' && view !== 'works') || view === 'map') &&
-              '@min-[1000px]/monitor:grid-cols-[minmax(0,1fr)_320px]'
+            selection &&
+              view === 'conversations' &&
+              '@min-[1400px]/monitor:grid-cols-[minmax(0,1fr)_320px]',
+            view === 'map' && '@min-[1000px]/monitor:grid-cols-[minmax(0,1fr)_320px]'
           )}
         >
           <div className="min-w-0">
