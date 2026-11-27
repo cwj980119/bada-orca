@@ -57,6 +57,7 @@ export const connected = defineFixture({
         expiresAt: Date.now() + 5 * 60_000
       },
       persistence: 'encrypted',
+      renewable: true,
       error: null
     }),
   render: () => (
@@ -76,7 +77,7 @@ export const missingSecret = defineFixture({
 })
 export const narrow = defineFixture({
   width: 420,
-  setup: () => setup(signedOut),
+  setup: () => setup({ ...signedOut, state: 'unconfigured' }),
   render: () => (
     <div className="settings-view-shell bg-background p-4">
       <IntranetSsoSettings />

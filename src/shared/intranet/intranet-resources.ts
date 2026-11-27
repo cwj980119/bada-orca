@@ -1,4 +1,5 @@
 import * as z from 'zod'
+import { IntranetMcpAuthSchema } from './intranet-mcp-auth'
 
 const envName = z
   .string()
@@ -15,11 +16,12 @@ export const IntranetMcpServerSchema = z
     name: z.string().trim().max(128),
     purpose: z.enum(['tools', 'knowledge']),
     enabled: z.boolean(),
-    transport: z.enum(['http', 'stdio']),
+    transport: z.enum(['http', 'sse', 'stdio']),
     url: z.string().trim().max(2048),
     command: z.string().trim().max(2048),
     args: z.array(z.string().max(2048)).max(64),
-    tokenEnv: envName
+    tokenEnv: envName,
+    auth: IntranetMcpAuthSchema.optional()
   })
   .strict()
   .superRefine((server, context) => {
@@ -43,6 +45,18 @@ export const IntranetMcpServerSchema = z
         url.hash
       ) {
         throw new Error('Invalid MCP server URL.')
+      }
+      if (
+        server.auth &&
+        server.auth.type !== 'none' &&
+        url.protocol !== 'https:' &&
+        !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['url'],
+          message: '인증 연결은 HTTPS 주소를 사용해 주세요. 이 PC의 localhost는 HTTP도 지원합니다.'
+        })
       }
     } catch {
       context.addIssue({

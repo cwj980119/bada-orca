@@ -10,6 +10,9 @@ import {
   type IntranetSettings
 } from '../../../../../shared/intranet/intranet-settings'
 import { intranetMcpConfig } from '../../../../../shared/intranet/intranet-mcp-config'
+import { intranetCodexMcpServers } from '../../../../../shared/intranet/intranet-codex-mcp'
+import { stringify as stringifyToml } from 'smol-toml'
+import { IntranetMcpImport } from './IntranetMcpImport'
 import { Button } from '../../ui/button'
 import { Input } from '../../ui/input'
 import { Label } from '../../ui/label'
@@ -30,12 +33,15 @@ export function IntranetResourceSettings({
 }): React.JSX.Element {
   const t = useTranslate()
   const value = settings.resources ?? emptyIntranetResources()
-  const [format, setFormat] = useState<'opencode' | 'claude'>('opencode')
+  const [format, setFormat] = useState<'opencode' | 'claude' | 'codex'>('opencode')
   const [copyError, setCopyError] = useState('')
   const [copiedConfig, setCopiedConfig] = useState('')
+  const [exportOpen, setExportOpen] = useState(false)
   const parsed = IntranetSettingsSchema.safeParse(settings)
   const config = parsed.success
-    ? JSON.stringify(intranetMcpConfig(parsed.data, format), null, 2)
+    ? format === 'codex'
+      ? stringifyToml({ mcp_servers: intranetCodexMcpServers(parsed.data) })
+      : JSON.stringify(intranetMcpConfig(parsed.data, format), null, 2)
     : ''
   const update = (patch: Partial<IntranetResources>): void => onChange({ ...value, ...patch })
   return (
@@ -45,7 +51,7 @@ export function IntranetResourceSettings({
           title={t('intranet.resources.mcpTitle', 'Company MCP servers')}
           description={t(
             'intranet.resources.mcpDescription',
-            'Register internal tools and knowledge search servers. Enabled connections are passed to new OpenCode and Claude Code sessions.'
+            'Register once in Orca. Enabled connections are automatically adapted for new Claude Code, Codex and OpenCode sessions.'
           )}
           action={
             <Button
@@ -65,7 +71,8 @@ export function IntranetResourceSettings({
                       url: '',
                       command: '',
                       args: [],
-                      tokenEnv: ''
+                      tokenEnv: '',
+                      auth: { type: 'none' }
                     }
                   ]
                 })
@@ -76,6 +83,10 @@ export function IntranetResourceSettings({
             </Button>
           }
         >
+          <IntranetMcpImport
+            servers={value.mcpServers}
+            onImport={(mcpServers) => update({ mcpServers })}
+          />
           {value.mcpServers.map((server) => (
             <IntranetMcpServerEditor
               key={server.id}
@@ -94,8 +105,8 @@ export function IntranetResourceSettings({
           ))}
           <p data-settings-row="" className="py-3 text-settings-detail text-muted-foreground">
             {t(
-              'intranet.resources.mcpHelp',
-              'Enter an environment variable name, not the token itself. Set its value on the host running the agent. Commands must already be installed there. Orca does not download packages. OAuth and custom authentication use the existing CLI configuration.'
+              'intranet.mcp.help',
+              'Choose a connection and authentication method above. Orca shares the connection across agents. Commands must already be installed on the execution host. Remote hosts need their own credentials and Orca runtime.'
             )}
           </p>
         </SettingsGroup>
@@ -227,74 +238,90 @@ export function IntranetResourceSettings({
       </SettingsGroup>
       <SettingsGroup
         title={t('intranet.resources.exportTitle', 'Configuration for other clients')}
-        description={t(
-          'intranet.resources.exportHelp',
-          'Preview the current form. Save below to apply it in Orca. For another terminal, merge this JSON into that client’s configuration and reconnect. An existing Claude --mcp-config argument takes precedence; merge these entries there.'
-        )}
-      >
-        <div data-settings-row="" className="space-y-3 py-3">
-          <Select
-            value={format}
-            onValueChange={(next) => {
-              setFormat(next as typeof format)
-              setCopiedConfig('')
-            }}
-          >
-            <SelectTrigger
-              aria-label={t('intranet.resources.client', 'Client configuration format')}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="opencode">
-                OpenCode {settings.opencode.configVersion === 'v2' ? '2.x' : '1.x'}
-              </SelectItem>
-              <SelectItem value="claude">Claude Code</SelectItem>
-            </SelectContent>
-          </Select>
-          <Textarea
-            aria-label={t('intranet.resources.preview', 'MCP configuration preview')}
-            value={config}
-            readOnly
-            rows={8}
-            className="font-mono text-xs"
-          />
-          {!config ? (
-            <p role="status" className="text-settings-detail text-muted-foreground">
-              {t(
-                'intranet.resources.invalid',
-                'Complete the connection names, addresses and paths to preview the configuration.'
-              )}
-            </p>
-          ) : null}
+        action={
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
-            disabled={!config}
-            onClick={() => {
-              void navigator.clipboard
-                .writeText(config)
-                .then(() => {
-                  setCopiedConfig(config)
-                  setCopyError('')
-                })
-                .catch((error: unknown) =>
-                  setCopyError(error instanceof Error ? error.message : String(error))
-                )
-            }}
+            aria-expanded={exportOpen}
+            onClick={() => setExportOpen(!exportOpen)}
           >
-            <Copy className="size-4" />
-            {copiedConfig === config && config
-              ? t('intranet.resources.copied', 'Copied')
-              : t('intranet.resources.copy', 'Copy configuration')}
+            {exportOpen
+              ? t('intranet.resources.hideExport', 'Hide configuration')
+              : t('intranet.resources.showExport', 'View configuration')}
           </Button>
-          {copyError ? (
-            <p role="alert" className="text-settings-detail text-destructive">
-              {copyError}
-            </p>
-          ) : null}
-        </div>
+        }
+        description={t(
+          'intranet.resources.exportHelp',
+          'Orca applies saved connections automatically. Export JSON or TOML only for clients started outside Orca. An explicit Claude --mcp-config argument takes precedence.'
+        )}
+      >
+        {exportOpen ? (
+          <div data-settings-row="" className="space-y-3 py-3">
+            <Select
+              value={format}
+              onValueChange={(next) => {
+                setFormat(next as typeof format)
+                setCopiedConfig('')
+              }}
+            >
+              <SelectTrigger
+                aria-label={t('intranet.resources.client', 'Client configuration format')}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="opencode">
+                  OpenCode {settings.opencode.configVersion === 'v2' ? '2.x' : '1.x'}
+                </SelectItem>
+                <SelectItem value="claude">Claude Code</SelectItem>
+                <SelectItem value="codex">Codex (TOML)</SelectItem>
+              </SelectContent>
+            </Select>
+            <Textarea
+              aria-label={t('intranet.resources.preview', 'MCP configuration preview')}
+              value={config}
+              readOnly
+              rows={8}
+              className="font-mono text-xs"
+            />
+            {!config ? (
+              <p role="status" className="text-settings-detail text-muted-foreground">
+                {t(
+                  'intranet.resources.invalid',
+                  'Complete the connection names, addresses and paths to preview the configuration.'
+                )}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!config}
+              onClick={() => {
+                void navigator.clipboard
+                  .writeText(config)
+                  .then(() => {
+                    setCopiedConfig(config)
+                    setCopyError('')
+                  })
+                  .catch((error: unknown) =>
+                    setCopyError(error instanceof Error ? error.message : String(error))
+                  )
+              }}
+            >
+              <Copy className="size-4" />
+              {copiedConfig === config && config
+                ? t('intranet.resources.copied', 'Copied')
+                : t('intranet.resources.copy', 'Copy configuration')}
+            </Button>
+            {copyError ? (
+              <p role="alert" className="text-settings-detail text-destructive">
+                {copyError}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </SettingsGroup>
     </>
   )

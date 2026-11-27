@@ -1,5 +1,5 @@
 import { projectAgentLaunchProfile } from '../../../shared/agent-launch/choices/agent-launch-profile'
-import { intranetClaudeMcpArgs } from '../../../shared/intranet/intranet-claude-mcp-args'
+import { intranetAgentMcpArgs } from '../../../shared/intranet/intranet-agent-mcp-args'
 import { isTuiAgent } from '../../../shared/agent-launch/catalog/tui-agent-config'
 import type { GlobalSettings } from '../../../shared/settings/global-settings-types'
 import {
@@ -29,7 +29,7 @@ export function structuredAgentConfiguredArgs(
       ).args
     : resolveTuiAgentLaunchArgs(agent, settings)
   const parsed = tokenizeStartupCommand(
-    intranetClaudeMcpArgs(agent, settings.intranet, configured, shell),
+    intranetAgentMcpArgs(agent, settings.intranet, configured, shell),
     shell
   )
   if (!parsed.ok) {

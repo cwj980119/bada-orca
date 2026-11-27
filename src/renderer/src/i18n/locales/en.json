@@ -1,13 +1,19 @@
 {
   "intranet": {
     "sso": {
+      "authMethod": "Client authentication",
+      "publicClientOption": "Public client (PKCE)",
+      "configure": "Sign-in settings",
+      "renewable": "Sign-in renews automatically",
+      "redirectUri": "Redirect URI",
+      "secretStorage": "Stored with your session using the operating system’s protected storage. Leave blank to use an existing secret.",
+      "refreshHelp": "Request offline_access to stay signed in when the identity provider supports refresh tokens.",
       "invalidPort": "Use a port between 1024 and 65535.",
       "invalidScopes": "OIDC requires the openid scope. Check the requested scopes.",
       "requiredField": "Enter {{field}} before enabling BADA sign-in.",
       "invalidField": "Check {{field}}. Server URLs must use HTTPS or the configured BADA address without credentials, a query, or a fragment.",
       "title": "BADA sign-in",
       "description": "Sign in with BADA to connect your account to Orca and company tools.",
-      "buildRequired": "BADA sign-in is not configured in this build. Contact your administrator.",
       "enabled": "Enable BADA sign-in",
       "label": "Provider display name",
       "protocol": "Authentication protocol",
@@ -54,7 +60,9 @@
         "cancelled": "BADA sign-in was cancelled.",
         "callback_unavailable": "Could not open the configured callback port. Close another login window or the program using this port, then retry.",
         "callback_failed": "The login callback failed. Retry.",
-        "missing_client_secret": "BADA sign-in is not configured in this build. Contact your administrator."
+        "missing_client_secret": "Enter the Client Secret in Sign-in settings, or choose Public client (PKCE) if your client supports it.",
+        "refresh_failed": "Could not renew your sign-in. Your session is retained and Orca will retry when the server is available.",
+        "session_expired": "The identity provider expired or revoked this session. Sign in again."
       },
       "clientSecret": "Client Secret",
       "clientSecretEnv": "Client secret environment variable",
@@ -63,7 +71,8 @@
       "clientSecretBasic": "client_secret_basic",
       "clientSecretPost": "client_secret_post",
       "credentialsRequired": "Save the Client ID issued by BADA to enable sign-in.",
-      "invalidSecretEnv": "Enter an environment variable name, such as ORCA_BADA_CLIENT_SECRET."
+      "invalidSecretEnv": "Enter an environment variable name, such as ORCA_BADA_CLIENT_SECRET.",
+      "buildRequired": "BADA sign-in is not configured in this build. Contact your administrator."
     },
     "apiKeyEnv": "API key environment variable (optional)",
     "opencodePair": "Enter both the OpenCode server URL and model ID, or leave both empty to use your existing CLI configuration.",
@@ -113,8 +122,14 @@
     "opencodeApiKeyEnv": "OpenCode API key environment variable",
     "searchDescription": "Internal models, MCP servers, skills, knowledge sources and network settings.",
     "resources": {
+      "import": "Import MCP configuration",
+      "importHelp": "Paste Claude, OpenCode JSON/JSONC or Codex TOML. Save once in Orca to apply connections to new agent sessions.",
+      "importAction": "Add imported servers",
+      "imported": "Added to the form. Save connections below to apply.",
+      "showExport": "View configuration",
+      "hideExport": "Hide configuration",
       "mcpTitle": "Company MCP servers",
-      "mcpDescription": "Register internal tools and knowledge search servers. Enabled connections are passed to new OpenCode and Claude Code sessions.",
+      "mcpDescription": "Register once in Orca. Enabled connections are automatically adapted for new Claude Code, Codex and OpenCode sessions.",
       "addServer": "Add MCP server",
       "mcpHelp": "Enter an environment variable name, not the token itself. Set its value on the host running the agent. Commands must already be installed there. Orca does not download packages. OAuth and custom authentication use the existing CLI configuration.",
       "sourcesTitle": "Company skills and documents",
@@ -131,7 +146,7 @@
       "bridge": "Orca CLI command on the agent host",
       "sourceHelp": "Folders are read on the host running the agent; use paths available on that SSH server for remote sessions. Skill guides are read through MCP, not installed or executed. Document search supports text, Markdown, JSON, YAML, CSV and HTML. PDF/Office and semantic search require a knowledge MCP server.",
       "exportTitle": "Configuration for other clients",
-      "exportHelp": "Preview the current form. Save below to apply it in Orca. For another terminal, merge this JSON into that client’s configuration and reconnect. An existing Claude --mcp-config argument takes precedence; merge these entries there.",
+      "exportHelp": "Orca applies saved connections automatically. Export JSON or TOML only for clients started outside Orca. An explicit Claude --mcp-config argument takes precedence.",
       "client": "Client configuration format",
       "preview": "MCP configuration preview",
       "invalid": "Complete the connection names, addresses and paths to preview the configuration.",

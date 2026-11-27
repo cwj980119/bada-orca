@@ -161,8 +161,6 @@ export function useAgentLaunchPickerInventorySource(
       concreteWorkspace
     ]
   )
-  // Without a concrete workspace, CLI discovery can only ask this machine, so other hosts keep the seed.
-  // SSH discovery has no route yet, so SSH workspaces keep it too.
   const discoveryWorktreeId = draftTarget.worktreeId ?? null
   const ownerRuntime =
     discoveryWorktreeId || target?.kind === 'local'
@@ -215,7 +213,7 @@ export function useAgentLaunchPickerInventorySource(
   const build = (defaults: AgentPickerDefaultSettings | null | undefined) =>
     model.state === 'settled'
       ? agentPickerEntriesFromRows(
-          model.rows,
+          model.rows.filter((row) => model.detection.detectedIds?.includes(row.agent)),
           model.detection.detectedIds ?? [],
           (agent) => agentPickerChoiceSeeds(agent, defaults),
           formatAgentTypeLabel,

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { callRuntimeRpc } from '@/runtime/rpc/calls/runtime-rpc-call'
-import type { IntranetSsoStatus } from '../../../../../../shared/intranet/intranet-sso'
+import type {
+  IntranetSsoStatus,
+  IntranetSsoSettings
+} from '../../../../../../shared/intranet/intranet-sso'
 
 const LOCAL = { kind: 'local' } as const
 export function useIntranetSso(revision: string) {
@@ -8,26 +11,32 @@ export function useIntranetSso(revision: string) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
   const live = useRef(false)
-  const run = useCallback(async (method: string, params: { clientSecret?: string } = {}) => {
-    setBusy(true)
-    setError(false)
-    try {
-      const next = await callRuntimeRpc<IntranetSsoStatus>(LOCAL, method, params, {
-        suppressFeatureInteraction: true
-      })
-      if (live.current) {
-        setStatus(next)
+  const run = useCallback(
+    async (
+      method: string,
+      params: { clientSecret?: string; configuration?: IntranetSsoSettings } = {}
+    ) => {
+      setBusy(true)
+      setError(false)
+      try {
+        const next = await callRuntimeRpc<IntranetSsoStatus>(LOCAL, method, params, {
+          suppressFeatureInteraction: true
+        })
+        if (live.current) {
+          setStatus(next)
+        }
+      } catch {
+        if (live.current) {
+          setError(true)
+        }
+      } finally {
+        if (live.current) {
+          setBusy(false)
+        }
       }
-    } catch {
-      if (live.current) {
-        setError(true)
-      }
-    } finally {
-      if (live.current) {
-        setBusy(false)
-      }
-    }
-  }, [])
+    },
+    []
+  )
   useEffect(() => {
     live.current = true
     void run('intranet.ssoStatus')
@@ -39,9 +48,11 @@ export function useIntranetSso(revision: string) {
     const wait =
       status?.state === 'authorizing'
         ? 1000
-        : status?.state === 'signed-in' && status.identity
-          ? Math.max(1000, status.identity.expiresAt - Date.now())
-          : null
+        : status?.error === 'refresh_failed'
+          ? 30_000
+          : status?.state === 'signed-in' && status.identity
+            ? Math.max(1000, status.identity.expiresAt - Date.now())
+            : null
     if (wait === null) {
       return
     }

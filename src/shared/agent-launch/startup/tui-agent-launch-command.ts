@@ -1,5 +1,5 @@
 import { analyzeAgentChoiceArgs } from '../choices/agent-choice-args'
-import { intranetClaudeMcpArgs } from '../../intranet/intranet-claude-mcp-args'
+import { intranetAgentMcpArgs } from '../../intranet/intranet-agent-mcp-args'
 import {
   removeOverriddenAgentSessionArgs,
   resolveAgentSessionOptionLaunch
@@ -297,7 +297,7 @@ export function terminalSessionOptionInputs(args: {
     ...(choices.model ? { model: choices.model } : {}),
     ...(choices.permissionMode ? { permissionMode: choices.permissionMode } : {})
   }
-  const resourceArgs = intranetClaudeMcpArgs(
+  const resourceArgs = intranetAgentMcpArgs(
     args.agent,
     args.settings?.intranet,
     raw ?? '',

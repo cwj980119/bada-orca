@@ -38,6 +38,11 @@ import {
   DesktopBrowserBridgeResultChunkParams,
   DesktopBrowserBridgeResultParams
 } from '../browser/client-hosting/desktop-browser-bridge-protocol'
+import {
+  IntranetMcpAuthParams,
+  IntranetMcpConnectionParams,
+  IntranetMcpSecretParams
+} from '../intranet/intranet-mcp-rpc'
 import { IntranetSsoParams, IntranetSsoSignInParams } from '../intranet/intranet-sso'
 import {
   SshClaudeDiagnosticHandle,
@@ -1319,6 +1324,12 @@ export const RPC_PARAMS_BY_METHOD = {
   'hostedReview.getCreationEligibility': HostedReviewCreationEligibility,
   'intranet.claudeConfiguration': null,
   'intranet.codexModels': null,
+  'intranet.mcpAuthStatus': IntranetMcpAuthParams,
+  'intranet.mcpCancel': IntranetMcpAuthParams,
+  'intranet.mcpConnection': IntranetMcpConnectionParams,
+  'intranet.mcpSaveSecret': IntranetMcpSecretParams,
+  'intranet.mcpSignIn': IntranetMcpAuthParams,
+  'intranet.mcpSignOut': IntranetMcpAuthParams,
   'intranet.sshClaudeCancel': SshClaudeDiagnosticHandle,
   'intranet.sshClaudeCurrent': null,
   'intranet.sshClaudeStart': SshClaudeDiagnosticStart,

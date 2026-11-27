@@ -1,4 +1,5 @@
 import type { IntranetSettings } from './intranet-settings'
+import { effectiveMcpAuth } from './intranet-mcp-auth'
 
 type McpDefinition = Record<string, unknown>
 
@@ -17,7 +18,17 @@ export function intranetMcpServers(
     return definitions
   }
   for (const server of resources.mcpServers.filter((entry) => entry.enabled)) {
-    const env = server.tokenEnv
+    if (
+      server.transport !== 'stdio' &&
+      (server.transport === 'sse' || (server.auth && effectiveMcpAuth(server).type !== 'none'))
+    ) {
+      definitions[server.id] =
+        format === 'claude'
+          ? { type: 'stdio', command: bridgeCommand, args: ['intranet-mcp', server.id] }
+          : { type: 'local', command: [bridgeCommand, 'intranet-mcp', server.id] }
+      continue
+    }
+    const env = server.auth ? '' : server.tokenEnv
     const token = format === 'claude' ? `\${${env}}` : `{env:${env}}`
     definitions[server.id] =
       server.transport === 'http'

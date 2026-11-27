@@ -59,9 +59,12 @@ it('persists a sealed account and tokens bound to the provider configuration', (
   expect(
     session.save('provider-a', {
       identity,
+      clientSecret: 'bada-client-secret',
+      nonce: 'login-nonce',
       tokens: {
         accessToken: 'bada-access-secret',
         idToken: 'bada-id-secret',
+        refreshToken: 'bada-refresh-secret',
         expiresAt: 4_000_000_000_000
       }
     })
@@ -69,7 +72,11 @@ it('persists a sealed account and tokens bound to the provider configuration', (
   const text = readFileSync(path, 'utf8')
   expect(text).not.toContain('alice@company.internal')
   expect(text).not.toContain('bada-access-secret')
+  expect(text).not.toContain('bada-refresh-secret')
+  expect(text).not.toContain('bada-client-secret')
   expect(session.read('provider-a')).toEqual({
+    clientSecret: 'bada-client-secret',
+    nonce: 'login-nonce',
     identity: {
       issuer: 'https://company.internal',
       subject: 'employee-7',
@@ -80,6 +87,7 @@ it('persists a sealed account and tokens bound to the provider configuration', (
     tokens: {
       accessToken: 'bada-access-secret',
       idToken: 'bada-id-secret',
+      refreshToken: 'bada-refresh-secret',
       expiresAt: 4_000_000_000_000
     }
   })

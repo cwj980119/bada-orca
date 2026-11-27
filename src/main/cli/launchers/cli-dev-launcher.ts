@@ -39,12 +39,22 @@ export async function ensureDevLauncher(args: {
     encoding: 'utf8',
     mode: args.platform === 'win32' ? undefined : 0o755
   })
-  if (args.commandName === DEV_COMMAND_NAME && args.platform !== 'win32') {
-    // Why: dev PTYs prepend this dir to PATH, so keep a local `orca` alias without claiming the global command.
-    await writeFile(join(dirname(launcherPath), 'orca'), content, {
-      encoding: 'utf8',
-      mode: 0o755
-    })
+  if (args.commandName === DEV_COMMAND_NAME) {
+    const shellContent =
+      args.platform === 'win32'
+        ? buildUnixCliLauncher(
+            args.execPath.replaceAll('\\', '/'),
+            args.cliEntryPath,
+            args.userDataPath
+          )
+        : content
+    // Dev children need both names in Git Bash as well as native shells.
+    for (const commandName of args.platform === 'win32' ? [DEV_COMMAND_NAME, 'orca'] : ['orca']) {
+      await writeFile(join(dirname(launcherPath), commandName), shellContent, {
+        encoding: 'utf8',
+        mode: args.platform === 'win32' ? undefined : 0o755
+      })
+    }
   }
   return launcherPath
 }

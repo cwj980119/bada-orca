@@ -4,6 +4,39 @@ import { defaultIntranetSettings } from '../../../shared/intranet/intranet-setti
 import { composeAgentLaunchProfile } from '../../../shared/agent-launch/choices/tui-agent-launch-defaults'
 import type { IntranetResources } from '../../../shared/intranet/intranet-resources'
 
+it('adapts shared MCP connections into Codex overrides while keeping existing CLI arguments', () => {
+  const args = structuredAgentConfiguredArgs(
+    'codex',
+    {
+      intranet: {
+        ...defaultIntranetSettings(),
+        resources: {
+          bridgeCommand: 'orca',
+          sources: [],
+          mcpServers: [
+            {
+              id: 'company',
+              name: 'Company',
+              enabled: true,
+              purpose: 'tools',
+              transport: 'http',
+              url: 'https://tools.company.internal/mcp',
+              tokenEnv: 'COMPANY_TOKEN',
+              command: '',
+              args: []
+            }
+          ]
+        }
+      },
+      agentDefaultArgs: { codex: '--model company-coder' }
+    },
+    'linux'
+  )
+  expect(args).toContain('mcp_servers.company.url="https://tools.company.internal/mcp"')
+  expect(args).toContain('mcp_servers.company.bearer_token_env_var="COMPANY_TOKEN"')
+  expect(args.slice(-2)).toEqual(['--model', 'company-coder'])
+})
+
 it('applies current resource connections at structured launch while leaving stored and published arguments editable', () => {
   const resources: IntranetResources = {
     bridgeCommand: 'orca',

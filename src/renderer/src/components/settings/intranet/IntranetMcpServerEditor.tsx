@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Switch } from '../../ui/switch'
 import { useTranslate } from '@/i18n/use-translate'
 import type { IntranetMcpServer } from '../../../../../shared/intranet/intranet-resources'
+import { IntranetMcpAuthentication } from './mcp/IntranetMcpAuthentication'
 
 export function IntranetMcpServerEditor({
   value,
@@ -82,7 +83,10 @@ export function IntranetMcpServerEditor({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="http">
-                {t('intranet.resources.http', 'HTTP MCP server')}
+                {t('intranet.mcp.http', 'Streamable HTTP (recommended)')}
+              </SelectItem>
+              <SelectItem value="sse">
+                {t('intranet.mcp.sse', 'HTTP + SSE (legacy servers)')}
               </SelectItem>
               <SelectItem value="stdio">
                 {t('intranet.resources.stdio', 'Installed command (stdio)')}
@@ -91,7 +95,7 @@ export function IntranetMcpServerEditor({
           </Select>
         </div>
       </div>
-      {value.transport === 'http' ? (
+      {value.transport !== 'stdio' ? (
         <>
           <div className="space-y-1.5">
             <Label htmlFor={`${value.id}-url`}>
@@ -105,18 +109,10 @@ export function IntranetMcpServerEditor({
               className="font-mono"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor={`${value.id}-token`}>
-              {t('intranet.resources.token', 'Bearer token environment variable (optional)')}
-            </Label>
-            <Input
-              id={`${value.id}-token`}
-              value={value.tokenEnv}
-              onChange={(event) => edit('tokenEnv', event.target.value)}
-              placeholder="COMPANY_MCP_TOKEN"
-              className="font-mono"
-            />
-          </div>
+          <IntranetMcpAuthentication
+            server={value}
+            onChange={(auth) => onChange({ ...value, auth, tokenEnv: '' })}
+          />
         </>
       ) : (
         <>

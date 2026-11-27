@@ -4,6 +4,7 @@ import {
 } from '../../../../shared/intranet/intranet-sso'
 import { runtimeIntranetSso } from '../../../intranet-sso/runtime-intranet-sso'
 import { defineMethod, InvalidArgumentError, type RpcContext } from '../core'
+import { readIntranetSettings } from '../../../../shared/intranet/intranet-settings'
 
 function service(context: RpcContext) {
   if (context.caller?.kind !== 'desktop') {
@@ -23,24 +24,38 @@ export const INTRANET_SSO_METHODS = [
           'BADA credentials are available only to local apps and agents.'
         )
       }
-      const credentials = runtimeIntranetSso(context.runtime).credentials()
-      if (!credentials) {
-        throw new InvalidArgumentError('Sign in to BADA again to obtain a valid token.')
-      }
-      return credentials
+      const auth = runtimeIntranetSso(context.runtime)
+      return auth.ensureFresh().then(() => {
+        const credentials = auth.credentials()
+        if (!credentials) {
+          throw new InvalidArgumentError('Sign in to BADA again to obtain a valid token.')
+        }
+        return credentials
+      })
     }
   }),
   defineMethod({
     name: 'intranet.ssoStatus',
     permission: 'workspace',
     params: IntranetSsoParams,
-    handler: (_params, context) => service(context).status()
+    handler: (_params, context) => service(context).ensureFresh()
   }),
   defineMethod({
     name: 'intranet.ssoSignIn',
     permission: 'workspace',
     params: IntranetSsoSignInParams,
-    handler: (params, context) => service(context).start(params.clientSecret)
+    handler: (params, context) => {
+      const auth = service(context)
+      const save = params.configuration
+        ? context.runtime.updateClientSettings({
+            intranet: {
+              ...readIntranetSettings(context.runtime.getClientSettings().intranet),
+              sso: params.configuration
+            }
+          })
+        : Promise.resolve()
+      return save.then(() => auth.start(params.clientSecret))
+    }
   }),
   defineMethod({
     name: 'intranet.ssoSignOut',

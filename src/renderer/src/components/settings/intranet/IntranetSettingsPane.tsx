@@ -40,6 +40,7 @@ export function IntranetSettingsPane({
     setError('')
     const parsed = IntranetSettingsSchema.safeParse({
       ...draft,
+      sso: readIntranetSettings(settings).sso,
       allowedHosts: hosts
         .split(/[\n,]/)
         .map((host) => host.trim())

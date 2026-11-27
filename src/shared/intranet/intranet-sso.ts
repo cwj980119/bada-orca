@@ -98,7 +98,7 @@ export function defaultIntranetSsoSettings(): IntranetSsoSettings {
     clientId: '',
     clientSecretEnv: BADA_SSO_CLIENT_SECRET_ENV,
     tokenEndpointAuthMethod: 'client_secret_basic',
-    scopes: 'openid profile email',
+    scopes: 'openid profile email offline_access',
     authorizationUrl: `${BADA_SSO_ISSUER}/oauth2/authorize`,
     tokenUrl: `${BADA_SSO_ISSUER}/oauth2/token`,
     userInfoUrl: `${BADA_SSO_ISSUER}/oauth2/userinfo`,
@@ -131,22 +131,30 @@ export type IntranetSsoIdentity = {
 export const IntranetSsoTokensSchema = z.object({
   accessToken: z.string().min(1).max(65536),
   idToken: z.string().min(1).max(65536).nullable(),
+  refreshToken: z.string().min(1).max(65536).optional(),
   expiresAt: z.number().finite().positive()
 })
 export type IntranetSsoTokens = z.infer<typeof IntranetSsoTokensSchema>
 export type IntranetSsoSession = {
   identity: IntranetSsoIdentity
   tokens?: IntranetSsoTokens
+  clientSecret?: string
+  nonce?: string
 }
-export type BadaCredentials = IntranetSsoIdentity & IntranetSsoTokens
+export type BadaCredentials = IntranetSsoIdentity & Omit<IntranetSsoTokens, 'refreshToken'>
 
 export type IntranetSsoStatus = {
   state: 'unconfigured' | 'signed-out' | 'authorizing' | 'signed-in' | 'expired' | 'error'
   identity: IntranetSsoIdentity | null
   persistence: 'encrypted' | 'memory'
   error: string | null
+  configuration?: IntranetSsoSettings
+  renewable?: boolean
 }
 
 export const IntranetSsoParams = z.object({})
-export const IntranetSsoSignInParams = z.object({ clientSecret: z.string().max(8192).optional() })
+export const IntranetSsoSignInParams = z.object({
+  clientSecret: z.string().max(8192).optional(),
+  configuration: IntranetSsoSettingsSchema.optional()
+})
 export const INTRANET_SSO_CALLBACK_PATH = '/intranet/oauth/callback'

@@ -1,4 +1,5 @@
 import { nativeChatPreferenceFor } from '../../../../../../shared/agent-launch/choices/structured-native-chat-launch-route'
+import { isIntranetAgent } from '../../../../../../shared/intranet/intranet-features'
 import { parseExecutionHostId } from '../../../../../../shared/execution-host/execution-host'
 import { registeredAgentChatInstallable } from '../../../../../../shared/agent-session/agent-discovery/agent-session-registered-agents'
 import {
@@ -87,6 +88,14 @@ export function readChatProgram(
   host: { executionHostId: string; hostCapabilities: readonly string[] | null },
   detected: readonly TuiAgent[] | null
 ): ChatProgramObservation {
+  if (isIntranetAgent(agent)) {
+    if (detected === null) {
+      return 'unlearned'
+    }
+    if (!detected.includes(agent)) {
+      return 'missing'
+    }
+  }
   const context = hostContext(store, host)
   const { executionHostId, runtimeId, pairingRevision, hostCapabilities: capabilities } = context
   const snapshot = readHostStructuredAgentAvailability(executionHostId, runtimeId, pairingRevision)

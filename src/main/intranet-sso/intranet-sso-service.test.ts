@@ -17,7 +17,8 @@ afterEach(async () => {
 it('shares the signed-in account with agents and refuses it after expiry or sign-out', async () => {
   const fixture = await createSsoFixture({
     authMethod: 'client_secret_basic',
-    clientSecret: () => 'test:secret +/'
+    clientSecret: () => 'test:secret +/',
+    refreshable: false
   })
   fixtures.push(fixture)
   const runtime = new OrcaRuntimeService()
@@ -27,7 +28,7 @@ it('shares the signed-in account with agents and refuses it after expiry or sign
   try {
     fixture.service.start()
     await vi.waitFor(() => expect(fixture.service.status().state).toBe('signed-in'))
-    expect(method.handler({}, context)).toMatchObject({
+    await expect(method.handler({}, context)).resolves.toMatchObject({
       accessToken: 'company-access-token',
       email: 'alice@company.internal'
     })
@@ -40,13 +41,13 @@ it('shares the signed-in account with agents and refuses it after expiry or sign
     })
     const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 301_000)
     expect(fixture.service.credentials()).toBeNull()
-    expect(() => method.handler({}, context)).toThrow('Sign in to BADA again')
+    await expect(method.handler({}, context)).rejects.toThrow('Sign in to BADA again')
     expect(withBadaAgentEnvironment({ ORCA_BADA_ACCESS_TOKEN: 'stale', KEPT: 'value' })).toEqual({
       KEPT: 'value'
     })
     clock.mockRestore()
     fixture.service.signOut()
-    expect(() => method.handler({}, context)).toThrow('Sign in to BADA again')
+    await expect(method.handler({}, context)).rejects.toThrow('Sign in to BADA again')
     expect(withBadaAgentEnvironment({})).toEqual({})
   } finally {
     dispose()
@@ -82,7 +83,8 @@ it('completes OIDC with PKCE and makes tokens available only through the credent
     subject: 'employee-7',
     email: 'alice@company.internal'
   })
-  expect(JSON.stringify(fixture.identities)).not.toContain('company-refresh-token')
+  expect(fixture.retained?.tokens?.refreshToken).toBe('company-refresh-token')
+  expect(fixture.service.credentials()).not.toHaveProperty('refreshToken')
   fixture.service.signOut()
   expect(fixture.service.status()).toMatchObject({ state: 'signed-out', identity: null })
   expect(fixture.retained).toBeNull()

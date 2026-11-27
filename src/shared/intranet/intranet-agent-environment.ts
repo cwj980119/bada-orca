@@ -38,7 +38,9 @@ export function intranetAgentEnvironment(
       OPENCODE_DISABLE_MODELS_FETCH: 'true',
       OPENCODE_DISABLE_SHARE: 'true'
     })
-    const { baseUrl, configVersion, apiKeyEnv } = settings.opencode
+    const { baseUrl, apiKeyEnv } = settings.opencode
+    const configVersion = agent === 'opencode2' ? 'v2' : settings.opencode.configVersion
+    const agentSettings = { ...settings, opencode: { ...settings.opencode, configVersion } }
     const defaultModel = intranetOpenCodeDefaultModel(settings.opencode)
     const models = intranetOpenCodeModels(settings.opencode)
     delete result.ORCA_INTRANET_OPENCODE_MODELS
@@ -83,7 +85,7 @@ export function intranetAgentEnvironment(
             )
           }
     result.OPENCODE_CONFIG_CONTENT = JSON.stringify({
-      ...mergeIntranetOpenCodeMcp(ownConfig, settings),
+      ...mergeIntranetOpenCodeMcp(ownConfig, agentSettings),
       ...(defaultModel ? { model: defaultModel } : {}),
       ...(configVersion === 'v2'
         ? { update: 'disable' }

@@ -47,8 +47,7 @@ export function botAgentSetupFromDraft(agent: BotAgent, draft: AgentPickerDraft)
   }
 }
 
-/** Each agent the host can run a bot on, as a chat that keeps its setup; the bot's own agent opens
- *  on what the bot saved. One it lacks is listed greyed with its reason. */
+/** Installed agents that can run this bot as a chat, keeping its saved setup. */
 function useBotAgentPickerEntries(
   observed: AgentPickerEntry[],
   choices: readonly BotAgent[],
@@ -58,12 +57,10 @@ function useBotAgentPickerEntries(
   const t = useTranslate()
   const projections = useMemo(() => new WeakMap<AgentPickerEntry, Projection>(), [])
   const entries = observed
-    .filter((entry) => choices.some((agent) => agent === entry.agent))
+    .filter(
+      (entry) => entry.surfaces.includes('chat') && choices.some((agent) => agent === entry.agent)
+    )
     .map((entry): AgentPickerEntry => {
-      // One the host lacks stays listed, greyed, with its reason.
-      if (!choices.some((agent) => agent === entry.agent)) {
-        return entry.surfaces.length ? { ...entry, surfaces: [] } : entry
-      }
       const own = entry.agent === setup.agent
       // Another agent opens on its own defaults, keeping the bot's permission where it offers it.
       const permissionMode = permissionOn(entry.agent, setup.permissionMode)
@@ -174,7 +171,7 @@ export function BotAgentLaunchPicker({
     },
     [onChange, value.agent, value.permissionMode]
   )
-  if (!choices.length) {
+  if (!choices.length || !entries.length) {
     return (
       <p className="text-xs text-muted-foreground">
         {t(

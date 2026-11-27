@@ -161,8 +161,13 @@ export function intranetAllowedHosts(settings: IntranetSettings): string[] {
       : []),
     ...(sso.enabled ? [sso.issuer] : []),
     ...(settings.resources?.mcpServers
-      .filter((server) => server.enabled && server.transport === 'http')
-      .map((server) => server.url) ?? [])
+      .filter((server) => server.enabled && server.transport !== 'stdio')
+      .map((server) => server.url) ?? []),
+    ...(settings.resources?.mcpServers.flatMap((server) =>
+      server.enabled && server.auth?.type === 'oauth' && server.auth.issuer
+        ? [server.auth.issuer]
+        : []
+    ) ?? [])
   ]) {
     if (endpoint) {
       hosts.push(new URL(endpoint).hostname)

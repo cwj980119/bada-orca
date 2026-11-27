@@ -1,8 +1,6 @@
-import { readFileSync, statSync, unlinkSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
-import { getSecretStore } from '../../shared/secure-storage/secret-store'
-import { writeSecureFile } from '../../shared/secure-storage/secure-file'
+import { SealedJsonFile } from '../../shared/secure-storage/sealed-json-file'
 import {
   IntranetSsoTokensSchema,
   type IntranetSsoSession,
@@ -18,7 +16,9 @@ const Session = z.object({
     email: z.string().nullable(),
     expiresAt: z.number().finite()
   }),
-  tokens: IntranetSsoTokensSchema.optional()
+  tokens: IntranetSsoTokensSchema.optional(),
+  clientSecret: z.string().max(8192).optional(),
+  nonce: z.string().max(512).optional()
 })
 
 export function ssoConfigurationKey(settings: IntranetSsoSettings): string {
@@ -26,19 +26,22 @@ export function ssoConfigurationKey(settings: IntranetSsoSettings): string {
 }
 
 export class IntranetSsoSessionFile {
-  constructor(private readonly path: string) {}
+  private readonly file: SealedJsonFile
+
+  constructor(path: string) {
+    this.file = new SealedJsonFile(path)
+  }
 
   read(fingerprint: string): IntranetSsoSession | null {
     try {
-      if (statSync(this.path).size > 256 * 1024) {
-        return null
-      }
-      const ciphertext = readFileSync(this.path, 'utf8')
-      const parsed = Session.safeParse(
-        JSON.parse(getSecretStore().decryptString(Buffer.from(ciphertext, 'base64')))
-      )
+      const parsed = Session.safeParse(this.file.read())
       return parsed.success && parsed.data.fingerprint === fingerprint
-        ? { identity: parsed.data.identity, tokens: parsed.data.tokens }
+        ? {
+            identity: parsed.data.identity,
+            tokens: parsed.data.tokens,
+            ...(parsed.data.clientSecret ? { clientSecret: parsed.data.clientSecret } : {}),
+            ...(parsed.data.nonce ? { nonce: parsed.data.nonce } : {})
+          }
         : null
     } catch {
       return null
@@ -46,23 +49,10 @@ export class IntranetSsoSessionFile {
   }
 
   save(fingerprint: string, session: IntranetSsoSession): boolean {
-    const store = getSecretStore()
-    if (!store.isEncryptionAvailable() || store.describeProtectionGap() !== null) {
-      return false
-    }
-    const ciphertext = store
-      .encryptString(JSON.stringify({ fingerprint, ...session }))
-      .toString('base64')
-    return writeSecureFile(this.path, ciphertext, { durable: true, ownerOnly: true })
+    return this.file.save({ fingerprint, ...session })
   }
 
   clear(): void {
-    try {
-      unlinkSync(this.path)
-    } catch (error) {
-      if (!(error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')) {
-        throw new Error('storage_failed')
-      }
-    }
+    this.file.clear()
   }
 }

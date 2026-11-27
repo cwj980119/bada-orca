@@ -23,6 +23,10 @@ export async function createSsoFixture(
     omitPkceMetadata?: boolean
     userInfoOnly?: boolean
     profileSubject?: string
+    refreshable?: boolean
+    refreshError?: 'invalid_grant' | 'unavailable'
+    refreshSubject?: string
+    refreshGate?: Promise<void>
   } = {}
 ) {
   const { publicKey, privateKey } = await generateKeyPair('RS256')
@@ -33,6 +37,8 @@ export async function createSsoFixture(
   const identities: IntranetSsoSession[] = []
   let retained: IntranetSsoSession | null = null
   let base = ''
+  let refreshToken = 'company-refresh-token'
+  const refreshReceived = Promise.withResolvers<void>()
   const server = createServer((request, response) => {
     void (async () => {
       response.setHeader('content-type', 'application/json')
@@ -85,6 +91,36 @@ export async function createSsoFixture(
           response.end('{}')
           return
         }
+        if (form.get('grant_type') === 'refresh_token') {
+          refreshReceived.resolve()
+          await options.refreshGate
+          if (options.refreshError || form.get('refresh_token') !== refreshToken) {
+            response.writeHead(options.refreshError === 'unavailable' ? 503 : 400)
+            response.end(JSON.stringify({ error: options.refreshError ?? 'invalid_grant' }))
+            return
+          }
+          refreshToken = 'rotated-refresh-token'
+          const idToken = options.refreshSubject
+            ? await new SignJWT({})
+                .setProtectedHeader({ alg: 'RS256' })
+                .setIssuer(base)
+                .setAudience('desktop-test-client')
+                .setSubject(options.refreshSubject)
+                .setIssuedAt()
+                .setExpirationTime('5m')
+                .sign(privateKey)
+            : undefined
+          response.end(
+            JSON.stringify({
+              access_token: 'renewed-access-token',
+              refresh_token: refreshToken,
+              token_type: 'Bearer',
+              expires_in: 300,
+              ...(idToken ? { id_token: idToken } : {})
+            })
+          )
+          return
+        }
         pkceVerified =
           createHash('sha256')
             .update(form.get('code_verifier') ?? '')
@@ -110,7 +146,7 @@ export async function createSsoFixture(
         response.end(
           JSON.stringify({
             access_token: 'company-access-token',
-            refresh_token: 'company-refresh-token',
+            ...(options.refreshable === false ? {} : { refresh_token: 'company-refresh-token' }),
             token_type: 'Bearer',
             expires_in: 300,
             id_token: idToken
@@ -154,7 +190,7 @@ export async function createSsoFixture(
     userInfoUrl: `${base}/profile`,
     subjectClaim: 'uid'
   }
-  const service = new IntranetSsoService({
+  const ports: ConstructorParameters<typeof IntranetSsoService>[0] = {
     settings: () => settings,
     provider: options.provider,
     clientSecret: options.clientSecret,
@@ -185,10 +221,13 @@ export async function createSsoFixture(
       }
       callback = fetch(target).then((response) => response.text())
     }
-  })
+  }
+  const service = new IntranetSsoService(ports)
   return {
     service,
     identities,
+    refreshReceived: refreshReceived.promise,
+    reopen: () => new IntranetSsoService(ports),
     get pkceVerified() {
       return pkceVerified
     },

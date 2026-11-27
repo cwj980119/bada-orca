@@ -74,6 +74,11 @@ export async function main(
     await (await import('./intranet/bada-auth-mcp.js')).startBadaAuthMcp()
     return
   }
+  if (argv[0] === 'intranet-mcp') {
+    configureExecutable?.(['intranet-mcp'])
+    await (await import('./intranet/intranet-mcp.js')).startIntranetMcp(argv.slice(1))
+    return
+  }
   if (argv[0] === 'external-agent-mcp') {
     configureExecutable?.(['external-agent-mcp'])
     await (
